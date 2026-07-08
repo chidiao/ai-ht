@@ -12,7 +12,9 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns(
                         "http://localhost:*",
                         "http://127.0.0.1:*",
-                        "http://192.168.*.*:*"
+                        "http://192.168.*.*:*",
+                        "https://ht.chidiao.xin",
+                        "https://43.143.213.217"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
