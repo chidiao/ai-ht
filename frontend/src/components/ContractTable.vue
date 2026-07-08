@@ -4,6 +4,7 @@
       <el-table-column prop="contractNo" label="合同编号" width="140" fixed />
       <el-table-column prop="name" label="合同名称" min-width="190" show-overflow-tooltip />
       <el-table-column prop="supplierName" label="供应商" min-width="190" show-overflow-tooltip />
+      <el-table-column prop="category" label="采购品类" width="120" show-overflow-tooltip />
       <el-table-column prop="amount" label="金额" width="120">
         <template #default="{ row }">{{ money(row.amount) }}</template>
       </el-table-column>

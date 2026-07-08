@@ -32,15 +32,23 @@ public class ContractController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String supplierName,
             @RequestParam(required = false) String owner,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) ContractStatus status,
             @RequestParam(required = false) List<ContractStatus> statuses,
             @RequestParam(required = false) PaymentStatus paymentStatus,
+            @RequestParam(required = false) ArchiveStatus archiveStatus,
+            @RequestParam(required = false) java.math.BigDecimal amountMin,
+            @RequestParam(required = false) java.math.BigDecimal amountMax,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate signStart,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate signEnd,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueStart,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueEnd,
             @RequestParam(required = false) Boolean expiringSoon,
             @RequestParam(required = false) String quickFilter
     ) {
-        return contractService.search(keyword, supplierName, owner, status, statuses, paymentStatus, dueStart, dueEnd, expiringSoon, quickFilter);
+        return contractService.search(keyword, supplierName, owner, department, category, status, statuses, paymentStatus,
+                archiveStatus, amountMin, amountMax, signStart, signEnd, dueStart, dueEnd, expiringSoon, quickFilter);
     }
 
     @GetMapping("/{id}")

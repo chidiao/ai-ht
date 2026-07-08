@@ -64,20 +64,78 @@
               <strong>{{ archiveLabel(detail.contract.archiveStatus) }}</strong>
             </div>
           </div>
+          <h3>基础信息</h3>
           <el-descriptions :column="3" border>
             <el-descriptions-item label="合同编号">{{ detail.contract.contractNo }}</el-descriptions-item>
-            <el-descriptions-item label="供应商">{{ detail.contract.supplierName }}</el-descriptions-item>
             <el-descriptions-item label="负责人">{{ detail.contract.owner }}</el-descriptions-item>
             <el-descriptions-item label="部门">{{ detail.contract.department || '-' }}</el-descriptions-item>
             <el-descriptions-item label="品类">{{ detail.contract.category || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="采购方式">{{ detail.contract.purchaseMethod || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="合同来源">{{ detail.contract.contractSource || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="采购内容" :span="2">{{ detail.contract.purchaseContent || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="采购数量">{{ detail.contract.purchaseQuantity || '-' }}</el-descriptions-item>
+          </el-descriptions>
+
+          <h3>供应商信息</h3>
+          <el-descriptions :column="3" border>
+            <el-descriptions-item label="供应商">{{ detail.contract.supplierName }}</el-descriptions-item>
+            <el-descriptions-item label="联系人">{{ detail.contract.supplierContact || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="联系电话">{{ detail.contract.supplierPhone || '-' }}</el-descriptions-item>
+          </el-descriptions>
+
+          <h3>金额与付款</h3>
+          <el-descriptions :column="3" border>
             <el-descriptions-item label="付款状态">{{ paymentLabel(detail.contract.paymentStatus) }}</el-descriptions-item>
             <el-descriptions-item label="合同金额">{{ money(detail.contract.amount) }}</el-descriptions-item>
             <el-descriptions-item label="已付金额">{{ money(detail.contract.paidAmount) }}</el-descriptions-item>
+            <el-descriptions-item label="付款方式" :span="3">{{ detail.contract.paymentMethod || '-' }}</el-descriptions-item>
+          </el-descriptions>
+
+          <h3>签署与履约</h3>
+          <el-descriptions :column="3" border>
+            <el-descriptions-item label="签署方式">{{ detail.contract.signingMethod || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="交付地点">{{ detail.contract.deliveryLocation || '-' }}</el-descriptions-item>
             <el-descriptions-item label="到期日期">{{ detail.contract.expiryDate }}</el-descriptions-item>
             <el-descriptions-item label="签订日期">{{ detail.contract.signDate || '-' }}</el-descriptions-item>
             <el-descriptions-item label="生效日期">{{ detail.contract.effectiveDate || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="备注">{{ detail.contract.remark || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="验收标准" :span="3">{{ detail.contract.acceptanceCriteria || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="备注" :span="3">{{ detail.contract.remark || '-' }}</el-descriptions-item>
           </el-descriptions>
+        </section>
+
+        <section class="content-panel">
+          <div class="section-title">
+            <h2>付款记录</h2>
+            <span>{{ detail.paymentRecords.length }} 条记录</span>
+          </div>
+          <el-table :data="detail.paymentRecords" border>
+            <el-table-column prop="paymentStage" label="付款阶段" width="120" />
+            <el-table-column prop="amount" label="本次付款" width="140">
+              <template #default="{ row }">{{ money(row.amount) }}</template>
+            </el-table-column>
+            <el-table-column prop="paidAmountAfterPayment" label="付款后累计" width="140">
+              <template #default="{ row }">{{ money(row.paidAmountAfterPayment) }}</template>
+            </el-table-column>
+            <el-table-column prop="paymentDate" label="付款日期" width="130" />
+            <el-table-column prop="invoiceNo" label="发票编号" width="150" />
+            <el-table-column prop="operator" label="操作人" width="110" />
+            <el-table-column prop="note" label="付款说明" min-width="220" show-overflow-tooltip />
+          </el-table>
+        </section>
+
+        <section class="content-panel">
+          <div class="section-title">
+            <h2>验收记录</h2>
+            <span>{{ detail.acceptanceRecords.length }} 条记录</span>
+          </div>
+          <el-table :data="detail.acceptanceRecords" border>
+            <el-table-column prop="deliveryDate" label="交付日期" width="130" />
+            <el-table-column prop="acceptanceDate" label="验收日期" width="130" />
+            <el-table-column prop="acceptanceResult" label="验收结果" width="130" />
+            <el-table-column prop="accepter" label="验收人" width="110" />
+            <el-table-column prop="acceptanceNote" label="验收说明" min-width="220" show-overflow-tooltip />
+            <el-table-column prop="exceptionNote" label="异常说明" min-width="180" show-overflow-tooltip />
+          </el-table>
         </section>
 
         <section class="content-panel">
@@ -151,7 +209,7 @@ const props = defineProps({
 })
 
 const { currentRole, currentRoleLabel, currentUserName } = useSession()
-const detail = reactive({ contract: null, logs: [] })
+const detail = reactive({ contract: null, paymentRecords: [], acceptanceRecords: [], logs: [] })
 const actionVisible = ref(false)
 const currentAction = ref(null)
 const saving = ref(false)
@@ -167,6 +225,8 @@ async function loadDetail() {
   try {
     const data = await fetchContractDetail(props.id)
     detail.contract = data.contract
+    detail.paymentRecords = data.paymentRecords || []
+    detail.acceptanceRecords = data.acceptanceRecords || []
     detail.logs = data.logs
   } catch (error) {
     ElMessage.error(error.response?.data?.message || '详情加载失败')
@@ -192,7 +252,14 @@ async function submitAction(actionForm) {
       action: currentAction.value.value,
       operator: actionForm.operator,
       comment: actionForm.comment,
-      paidAmount: currentAction.value.value === 'REGISTER_PAYMENT' ? actionForm.paidAmount : undefined
+      paidAmount: currentAction.value.value === 'REGISTER_PAYMENT' ? actionForm.paidAmount : undefined,
+      paymentStage: actionForm.paymentStage,
+      paymentDate: actionForm.paymentDate,
+      invoiceNo: actionForm.invoiceNo,
+      deliveryDate: actionForm.deliveryDate,
+      acceptanceDate: actionForm.acceptanceDate,
+      acceptanceResult: actionForm.acceptanceResult,
+      exceptionNote: actionForm.exceptionNote
     })
     ElMessage.success('流程已更新')
     actionVisible.value = false

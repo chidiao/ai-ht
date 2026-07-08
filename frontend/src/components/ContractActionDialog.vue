@@ -50,8 +50,31 @@
       </template>
 
       <template v-else-if="action?.value === 'REGISTER_PAYMENT'">
-        <el-form-item label="已付金额">
-          <el-input-number v-model="actionForm.paidAmount" :min="0" :max="contract?.amount || 0" :precision="2" :step="1000" />
+        <div class="payment-summary">
+          <div>
+            <span>合同金额</span>
+            <strong>{{ formatMoney(contract?.amount) }}</strong>
+          </div>
+          <div>
+            <span>已付金额</span>
+            <strong>{{ formatMoney(contract?.paidAmount) }}</strong>
+          </div>
+          <div>
+            <span>剩余可付</span>
+            <strong>{{ formatMoney(remainingAmount) }}</strong>
+          </div>
+        </div>
+        <el-form-item label="付款阶段">
+          <el-select v-model="actionForm.paymentStage">
+            <el-option label="预付款" value="预付款" />
+            <el-option label="到货款" value="到货款" />
+            <el-option label="验收款" value="验收款" />
+            <el-option label="尾款" value="尾款" />
+            <el-option label="其他" value="其他" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="本次付款金额">
+          <el-input-number v-model="actionForm.paidAmount" :min="0" :max="remainingAmount" :precision="2" :step="1000" />
         </el-form-item>
         <el-form-item label="付款日期">
           <el-date-picker v-model="actionForm.paymentDate" type="date" value-format="YYYY-MM-DD" />
@@ -65,6 +88,9 @@
       </template>
 
       <template v-else-if="action?.value === 'COMPLETE'">
+        <el-form-item label="交付日期">
+          <el-date-picker v-model="actionForm.deliveryDate" type="date" value-format="YYYY-MM-DD" />
+        </el-form-item>
         <el-form-item label="验收日期">
           <el-date-picker v-model="actionForm.acceptanceDate" type="date" value-format="YYYY-MM-DD" />
         </el-form-item>
@@ -76,6 +102,9 @@
         </el-form-item>
         <el-form-item label="完成说明">
           <el-input v-model="actionForm.comment" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-form-item label="异常说明">
+          <el-input v-model="actionForm.exceptionNote" type="textarea" :rows="2" />
         </el-form-item>
       </template>
 
@@ -109,7 +138,7 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 
 const props = defineProps({
   contract: {
@@ -133,6 +162,7 @@ const props = defineProps({
 const emit = defineEmits(['submit'])
 const visible = defineModel({ required: true })
 const actionForm = reactive(emptyActionForm())
+const remainingAmount = computed(() => Math.max(Number(props.contract?.amount || 0) - Number(props.contract?.paidAmount || 0), 0))
 
 watch(
   () => [visible.value, props.contract, props.action],
@@ -148,6 +178,13 @@ function submit() {
   emit('submit', {
     operator: actionForm.operator,
     paidAmount: props.action?.value === 'REGISTER_PAYMENT' ? actionForm.paidAmount : undefined,
+    paymentStage: props.action?.value === 'REGISTER_PAYMENT' ? actionForm.paymentStage : undefined,
+    paymentDate: props.action?.value === 'REGISTER_PAYMENT' ? actionForm.paymentDate : undefined,
+    invoiceNo: props.action?.value === 'REGISTER_PAYMENT' ? actionForm.invoiceNo : undefined,
+    deliveryDate: props.action?.value === 'COMPLETE' ? actionForm.deliveryDate : undefined,
+    acceptanceDate: props.action?.value === 'COMPLETE' ? actionForm.acceptanceDate : undefined,
+    acceptanceResult: props.action?.value === 'COMPLETE' ? actionForm.acceptanceResult : undefined,
+    exceptionNote: props.action?.value === 'COMPLETE' ? actionForm.exceptionNote : undefined,
     comment: buildComment()
   })
 }
@@ -156,12 +193,14 @@ function defaultsForAction() {
   const today = formatDate(new Date())
   return {
     operator: props.operatorName || '',
-    paidAmount: props.action?.value === 'REGISTER_PAYMENT' ? Number(props.contract?.amount || 0) : 0,
+    paidAmount: props.action?.value === 'REGISTER_PAYMENT' ? remainingAmount.value : 0,
+    paymentStage: '验收款',
     expectedConfirmDate: formatDate(addDays(new Date(), 3)),
     confirmMethod: '邮件确认',
     approver: '赵总',
     executionOwner: props.contract?.owner || '',
     plannedDeliveryDate: formatDate(addDays(new Date(), 30)),
+    deliveryDate: today,
     paymentDate: today,
     acceptanceDate: today,
     acceptanceResult: '验收通过',
@@ -184,12 +223,17 @@ function buildComment() {
     lines.push(`执行负责人：${actionForm.executionOwner || '-'}`)
     lines.push(`计划交付日期：${actionForm.plannedDeliveryDate || '-'}`)
   } else if (action === 'REGISTER_PAYMENT') {
-    lines.push(`已付金额：${actionForm.paidAmount}`)
+    lines.push(`本次付款金额：${actionForm.paidAmount}`)
+    lines.push(`付款阶段：${actionForm.paymentStage || '-'}`)
     lines.push(`付款日期：${actionForm.paymentDate || '-'}`)
     lines.push(`发票编号：${actionForm.invoiceNo || '-'}`)
   } else if (action === 'COMPLETE') {
+    lines.push(`交付日期：${actionForm.deliveryDate || '-'}`)
     lines.push(`验收日期：${actionForm.acceptanceDate || '-'}`)
     lines.push(`验收结论：${actionForm.acceptanceResult || '-'}`)
+    if (actionForm.exceptionNote) {
+      lines.push(`异常说明：${actionForm.exceptionNote}`)
+    }
   } else if (action === 'ARCHIVE') {
     lines.push(`归档编号：${actionForm.archiveNo || '-'}`)
     lines.push(`归档位置：${actionForm.archiveLocation || '-'}`)
@@ -207,16 +251,19 @@ function emptyActionForm() {
     operator: '',
     comment: '',
     paidAmount: 0,
+    paymentStage: '',
     supplierContact: '',
     expectedConfirmDate: '',
     confirmMethod: '',
     approver: '',
     executionOwner: '',
     plannedDeliveryDate: '',
+    deliveryDate: '',
     paymentDate: '',
     invoiceNo: '',
     acceptanceDate: '',
     acceptanceResult: '',
+    exceptionNote: '',
     archiveNo: '',
     archiveLocation: '',
     terminateDate: ''
@@ -231,6 +278,10 @@ function addDays(date, days) {
 
 function formatDate(date) {
   return date.toISOString().slice(0, 10)
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' })
 }
 </script>
 
@@ -252,6 +303,36 @@ function formatDate(date) {
 }
 
 .action-context strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.payment-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.payment-summary div {
+  padding: 10px 12px;
+  border: 1px solid #dde4ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.payment-summary span,
+.payment-summary strong {
+  display: block;
+}
+
+.payment-summary span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.payment-summary strong {
+  margin-top: 4px;
   color: #0f172a;
   font-size: 14px;
 }

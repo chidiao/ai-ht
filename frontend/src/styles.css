@@ -368,7 +368,7 @@ h3 {
 }
 
 .query-panel {
-  padding: 16px 16px 0;
+  padding: 16px 16px 18px;
   margin-bottom: 22px;
 }
 
@@ -381,9 +381,9 @@ h3 {
 
 .query-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 8px;
-  padding-bottom: 18px;
+  padding-top: 4px;
 }
 
 .table-panel {
@@ -460,6 +460,205 @@ h3 {
   margin-top: 0;
 }
 
+.dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.dashboard-kpis button {
+  min-height: 92px;
+  padding: 16px;
+  border: 1px solid #dde4ee;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.dashboard-kpis button:hover {
+  border-color: #93c5fd;
+  background: #f8fbff;
+  box-shadow: 0 14px 30px rgb(15 23 42 / 7%);
+}
+
+.dashboard-kpis span,
+.dashboard-kpis small {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.dashboard-kpis strong {
+  display: block;
+  margin: 8px 0 6px;
+  color: #0f172a;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 22px;
+}
+
+.dashboard-grid--wide {
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.55fr);
+}
+
+.todo-list {
+  display: grid;
+  gap: 10px;
+}
+
+.todo-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 66px;
+  padding: 12px 14px;
+  border: 1px solid #dde4ee;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.todo-row:hover,
+.status-bar-row:hover {
+  border-color: #93c5fd;
+  background: #f8fbff;
+  box-shadow: 0 14px 28px rgb(15 23 42 / 7%);
+}
+
+.todo-row__mark {
+  width: 10px;
+  height: 42px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.todo-row__mark--amber {
+  background: #f59e0b;
+}
+
+.todo-row__mark--rose {
+  background: #e11d48;
+}
+
+.todo-row__mark--emerald {
+  background: #059669;
+}
+
+.todo-row__mark--cyan {
+  background: #0891b2;
+}
+
+.todo-row strong,
+.todo-row small {
+  display: block;
+}
+
+.todo-row strong {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.todo-row small {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.todo-row em {
+  min-width: 38px;
+  color: #0f172a;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 800;
+  text-align: right;
+}
+
+.status-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.status-bar-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 36px;
+  gap: 12px;
+  align-items: center;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  text-align: left;
+}
+
+.status-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.status-bar-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+}
+
+.status-bar-row strong {
+  text-align: right;
+}
+
+.amount-overview {
+  display: grid;
+  gap: 12px;
+}
+
+.amount-overview div {
+  padding: 14px;
+  border: 1px solid #dde4ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.amount-overview span,
+.payment-progress span {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.amount-overview strong,
+.payment-progress strong {
+  display: block;
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.payment-progress {
+  margin-top: 18px;
+}
+
 .el-select,
 .el-date-editor.el-input,
 .el-date-editor.el-input__wrapper {
@@ -475,6 +674,14 @@ h3 {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
 
+  .dashboard-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-grid,
+  .dashboard-grid--wide {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -525,6 +732,7 @@ h3 {
 
   .stats-grid,
   .query-grid,
+  .dashboard-kpis,
   .form-grid,
   .role-grid {
     grid-template-columns: 1fr;

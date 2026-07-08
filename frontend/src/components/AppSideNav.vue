@@ -1,6 +1,10 @@
 <template>
   <aside class="sidenav">
     <el-menu :default-active="$route.path" router>
+      <el-menu-item index="/dashboard">
+        <el-icon><DataBoard /></el-icon>
+        <span>首页</span>
+      </el-menu-item>
       <el-menu-item index="/contracts">
         <el-icon><Document /></el-icon>
         <span>合同列表</span>
@@ -14,5 +18,5 @@
 </template>
 
 <script setup>
-import { CirclePlus, Document } from '@element-plus/icons-vue'
+import { CirclePlus, DataBoard, Document } from '@element-plus/icons-vue'
 </script>

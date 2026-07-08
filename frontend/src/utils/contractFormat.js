@@ -66,7 +66,7 @@ export function availableActions(row) {
   if (row.status === 'EXECUTING' && row.paymentStatus !== 'PAID') {
     actions = actions.filter((action) => action.value !== 'COMPLETE')
   }
-  if (row.status === 'EXECUTING' && row.paymentStatus === 'PAID') {
+  if (['ACTIVE', 'EXECUTING'].includes(row.status) && row.paymentStatus === 'PAID') {
     actions = actions.filter((action) => action.value !== 'REGISTER_PAYMENT')
   }
   if (!['COMPLETED', 'ARCHIVED', 'TERMINATED'].includes(row.status)) {

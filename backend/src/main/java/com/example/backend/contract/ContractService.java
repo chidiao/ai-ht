@@ -21,11 +21,17 @@ import java.util.Map;
 public class ContractService {
     private final ContractRepository contractRepository;
     private final ContractFlowLogRepository logRepository;
+    private final ContractPaymentRecordRepository paymentRecordRepository;
+    private final ContractAcceptanceRecordRepository acceptanceRecordRepository;
     private final Map<ContractAction, ContractStatus> requiredStatus = new EnumMap<>(ContractAction.class);
 
-    public ContractService(ContractRepository contractRepository, ContractFlowLogRepository logRepository) {
+    public ContractService(ContractRepository contractRepository, ContractFlowLogRepository logRepository,
+                           ContractPaymentRecordRepository paymentRecordRepository,
+                           ContractAcceptanceRecordRepository acceptanceRecordRepository) {
         this.contractRepository = contractRepository;
         this.logRepository = logRepository;
+        this.paymentRecordRepository = paymentRecordRepository;
+        this.acceptanceRecordRepository = acceptanceRecordRepository;
         requiredStatus.put(ContractAction.SUBMIT_SUPPLIER_CONFIRM, ContractStatus.DRAFT);
         requiredStatus.put(ContractAction.SUPPLIER_CONFIRMED, ContractStatus.SUPPLIER_CONFIRMING);
         requiredStatus.put(ContractAction.SUBMIT_APPROVAL, ContractStatus.SUPPLIER_CONFIRMING);
@@ -37,8 +43,10 @@ public class ContractService {
     }
 
     @Transactional(readOnly = true)
-    public List<Contract> search(String keyword, String supplierName, String owner, ContractStatus status,
-                                 List<ContractStatus> statuses, PaymentStatus paymentStatus, LocalDate dueStart, LocalDate dueEnd,
+    public List<Contract> search(String keyword, String supplierName, String owner, String department, String category,
+                                 ContractStatus status, List<ContractStatus> statuses, PaymentStatus paymentStatus,
+                                 ArchiveStatus archiveStatus, BigDecimal amountMin, BigDecimal amountMax,
+                                 LocalDate signStart, LocalDate signEnd, LocalDate dueStart, LocalDate dueEnd,
                                  Boolean expiringSoon, String quickFilter) {
         Specification<Contract> spec = (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -55,6 +63,12 @@ public class ContractService {
             if (hasText(owner)) {
                 predicates.add(builder.like(builder.lower(root.get("owner")), "%" + owner.trim().toLowerCase() + "%"));
             }
+            if (hasText(department)) {
+                predicates.add(builder.like(builder.lower(root.get("department")), "%" + department.trim().toLowerCase() + "%"));
+            }
+            if (hasText(category)) {
+                predicates.add(builder.like(builder.lower(root.get("category")), "%" + category.trim().toLowerCase() + "%"));
+            }
             if (status != null) {
                 predicates.add(builder.equal(root.get("status"), status));
             }
@@ -63,6 +77,21 @@ public class ContractService {
             }
             if (paymentStatus != null) {
                 predicates.add(builder.equal(root.get("paymentStatus"), paymentStatus));
+            }
+            if (archiveStatus != null) {
+                predicates.add(builder.equal(root.get("archiveStatus"), archiveStatus));
+            }
+            if (amountMin != null) {
+                predicates.add(builder.greaterThanOrEqualTo(root.get("amount"), amountMin));
+            }
+            if (amountMax != null) {
+                predicates.add(builder.lessThanOrEqualTo(root.get("amount"), amountMax));
+            }
+            if (signStart != null) {
+                predicates.add(builder.greaterThanOrEqualTo(root.get("signDate"), signStart));
+            }
+            if (signEnd != null) {
+                predicates.add(builder.lessThanOrEqualTo(root.get("signDate"), signEnd));
             }
             if (dueStart != null) {
                 predicates.add(builder.greaterThanOrEqualTo(root.get("expiryDate"), dueStart));
@@ -97,7 +126,12 @@ public class ContractService {
     @Transactional(readOnly = true)
     public ContractDetailResponse detail(Long id) {
         Contract contract = findContract(id);
-        return new ContractDetailResponse(contract, logRepository.findByContractIdOrderByOperatedAtAsc(id));
+        return new ContractDetailResponse(
+                contract,
+                paymentRecordRepository.findByContractIdOrderByPaymentDateAscCreatedAtAsc(id),
+                acceptanceRecordRepository.findByContractIdOrderByAcceptanceDateAscCreatedAtAsc(id),
+                logRepository.findByContractIdOrderByOperatedAtAsc(id)
+        );
     }
 
     @Transactional
@@ -138,15 +172,26 @@ public class ContractService {
         Contract contract = findContract(id);
         ContractStatus before = contract.getStatus();
         ContractStatus after = nextStatus(contract, request);
+        BigDecimal paymentRecordAmount = null;
         contract.setStatus(after);
         if (request.action() == ContractAction.APPROVE && contract.getEffectiveDate() == null) {
             contract.setEffectiveDate(LocalDate.now());
         }
         if (request.action() == ContractAction.REGISTER_PAYMENT) {
-            updatePayment(contract, request.paidAmount());
+            if (request.paidAmount() == null) {
+                throw new IllegalArgumentException("本次付款金额不能为空");
+            }
+            paymentRecordAmount = request.paidAmount();
+            updatePayment(contract, paymentRecordAmount);
         }
         applySubStatus(contract, request.action());
         Contract saved = contractRepository.save(contract);
+        if (request.action() == ContractAction.REGISTER_PAYMENT) {
+            savePaymentRecord(saved, request, paymentRecordAmount);
+        }
+        if (request.action() == ContractAction.COMPLETE) {
+            saveAcceptanceRecord(saved, request);
+        }
         logRepository.save(new ContractFlowLog(saved.getId(), request.action(), request.operator(), before, after, request.comment()));
         return saved;
     }
@@ -231,17 +276,19 @@ public class ContractService {
                 || status == ContractStatus.REJECTED;
     }
 
-    private void updatePayment(Contract contract, BigDecimal paidAmount) {
-        if (paidAmount == null || paidAmount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("付款金额不能为空且不能小于 0");
+    private void updatePayment(Contract contract, BigDecimal paymentAmount) {
+        if (paymentAmount == null || paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("本次付款金额必须大于 0");
         }
-        if (paidAmount.compareTo(contract.getAmount()) > 0) {
-            throw new IllegalArgumentException("已付金额不能大于合同金额");
+        BigDecimal paidAmount = contract.getPaidAmount() == null ? BigDecimal.ZERO : contract.getPaidAmount();
+        BigDecimal paidAmountAfterPayment = paidAmount.add(paymentAmount);
+        if (paidAmountAfterPayment.compareTo(contract.getAmount()) > 0) {
+            throw new IllegalArgumentException("本次付款后累计已付金额不能大于合同金额");
         }
-        contract.setPaidAmount(paidAmount);
-        if (paidAmount.compareTo(BigDecimal.ZERO) == 0) {
+        contract.setPaidAmount(paidAmountAfterPayment);
+        if (paidAmountAfterPayment.compareTo(BigDecimal.ZERO) == 0) {
             contract.setPaymentStatus(PaymentStatus.UNPAID);
-        } else if (paidAmount.compareTo(contract.getAmount()) < 0) {
+        } else if (paidAmountAfterPayment.compareTo(contract.getAmount()) < 0) {
             contract.setPaymentStatus(PaymentStatus.PARTIAL);
         } else {
             contract.setPaymentStatus(PaymentStatus.PAID);
@@ -279,6 +326,16 @@ public class ContractService {
         contract.setOwner(request.owner());
         contract.setDepartment(request.department());
         contract.setCategory(request.category());
+        contract.setPurchaseContent(request.purchaseContent());
+        contract.setPurchaseQuantity(request.purchaseQuantity());
+        contract.setPurchaseMethod(request.purchaseMethod());
+        contract.setSupplierContact(request.supplierContact());
+        contract.setSupplierPhone(request.supplierPhone());
+        contract.setDeliveryLocation(request.deliveryLocation());
+        contract.setPaymentMethod(request.paymentMethod());
+        contract.setAcceptanceCriteria(request.acceptanceCriteria());
+        contract.setSigningMethod(request.signingMethod());
+        contract.setContractSource(request.contractSource());
         contract.setAmount(request.amount());
         contract.setSignDate(request.signDate());
         contract.setEffectiveDate(request.effectiveDate());
@@ -288,5 +345,34 @@ public class ContractService {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private void savePaymentRecord(Contract contract, ContractActionRequest request, BigDecimal paymentRecordAmount) {
+        paymentRecordRepository.save(new ContractPaymentRecord(
+                contract.getId(),
+                defaultText(request.paymentStage(), "合同付款"),
+                paymentRecordAmount,
+                contract.getPaidAmount(),
+                request.paymentDate() == null ? LocalDate.now() : request.paymentDate(),
+                request.invoiceNo(),
+                request.comment(),
+                request.operator()
+        ));
+    }
+
+    private void saveAcceptanceRecord(Contract contract, ContractActionRequest request) {
+        acceptanceRecordRepository.save(new ContractAcceptanceRecord(
+                contract.getId(),
+                request.deliveryDate(),
+                request.acceptanceDate() == null ? LocalDate.now() : request.acceptanceDate(),
+                defaultText(request.acceptanceResult(), "验收通过"),
+                request.comment(),
+                request.exceptionNote(),
+                request.operator()
+        ));
+    }
+
+    private String defaultText(String value, String fallback) {
+        return hasText(value) ? value.trim() : fallback;
     }
 }

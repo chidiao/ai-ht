@@ -44,7 +44,7 @@ export const actionOptions = {
   ],
   ACTIVE: [
     { value: 'START_EXECUTION', label: '开始执行' },
-    { value: 'REGISTER_PAYMENT', label: '登记预付款' }
+    { value: 'REGISTER_PAYMENT', label: '登记付款' }
   ],
   EXECUTING: [
     { value: 'REGISTER_PAYMENT', label: '登记付款' },

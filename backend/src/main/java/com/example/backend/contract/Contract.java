@@ -43,6 +43,16 @@ public class Contract {
 
     private String department;
     private String category;
+    private String purchaseContent;
+    private String purchaseQuantity;
+    private String purchaseMethod;
+    private String supplierContact;
+    private String supplierPhone;
+    private String deliveryLocation;
+    private String paymentMethod;
+    private String acceptanceCriteria;
+    private String signingMethod;
+    private String contractSource;
 
     @NotNull
     @DecimalMin("0.00")
@@ -131,6 +141,26 @@ public class Contract {
     public void setDepartment(String department) { this.department = department; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+    public String getPurchaseContent() { return purchaseContent; }
+    public void setPurchaseContent(String purchaseContent) { this.purchaseContent = purchaseContent; }
+    public String getPurchaseQuantity() { return purchaseQuantity; }
+    public void setPurchaseQuantity(String purchaseQuantity) { this.purchaseQuantity = purchaseQuantity; }
+    public String getPurchaseMethod() { return purchaseMethod; }
+    public void setPurchaseMethod(String purchaseMethod) { this.purchaseMethod = purchaseMethod; }
+    public String getSupplierContact() { return supplierContact; }
+    public void setSupplierContact(String supplierContact) { this.supplierContact = supplierContact; }
+    public String getSupplierPhone() { return supplierPhone; }
+    public void setSupplierPhone(String supplierPhone) { this.supplierPhone = supplierPhone; }
+    public String getDeliveryLocation() { return deliveryLocation; }
+    public void setDeliveryLocation(String deliveryLocation) { this.deliveryLocation = deliveryLocation; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    public String getAcceptanceCriteria() { return acceptanceCriteria; }
+    public void setAcceptanceCriteria(String acceptanceCriteria) { this.acceptanceCriteria = acceptanceCriteria; }
+    public String getSigningMethod() { return signingMethod; }
+    public void setSigningMethod(String signingMethod) { this.signingMethod = signingMethod; }
+    public String getContractSource() { return contractSource; }
+    public void setContractSource(String contractSource) { this.contractSource = contractSource; }
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public BigDecimal getPaidAmount() { return paidAmount; }
