@@ -19,7 +19,7 @@ const routes = [
   { path: '/archive', name: 'archive', component: TaskCenterPage, meta: { module: 'archive', roles: ['ARCHIVIST', 'ADMIN'] } },
   { path: '/contracts/new', name: 'contract-new', component: ContractCreatePage, meta: { roles: ['PURCHASER', 'ADMIN'] } },
   { path: '/contracts/:id', name: 'contract-detail', component: ContractDetailPage, props: true },
-  { path: '/contracts/:id/edit', name: 'contract-edit', component: ContractCreatePage, props: true }
+  { path: '/contracts/:id/edit', name: 'contract-edit', component: ContractCreatePage, props: true, meta: { roles: ['PURCHASER', 'ADMIN'] } }
 ]
 
 export const router = createRouter({

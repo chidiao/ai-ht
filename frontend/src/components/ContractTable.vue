@@ -31,7 +31,7 @@
         <template #default="{ row }">
           <div class="row-actions">
             <el-button link type="primary" @click="$emit('detail', row)">详情</el-button>
-            <el-button v-if="canEdit(row)" link type="primary" @click="$emit('edit', row)">编辑</el-button>
+            <el-button v-if="canEditRow(row)" link type="primary" @click="$emit('edit', row)">编辑</el-button>
             <el-button v-if="canDeleteRow(row)" link type="danger" @click="$emit('delete', row)">删除</el-button>
           </div>
         </template>
@@ -50,7 +50,6 @@
 <script setup>
 import { Document } from '@element-plus/icons-vue'
 import {
-  canEdit,
   isExpiring,
   money,
   paymentLabel,
@@ -69,6 +68,10 @@ defineProps({
     default: false
   },
   canDeleteRow: {
+    type: Function,
+    default: () => false
+  },
+  canEditRow: {
     type: Function,
     default: () => false
   }

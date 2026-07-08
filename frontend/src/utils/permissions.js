@@ -38,12 +38,15 @@ export function canExportContracts(role) {
   return ['PURCHASER', 'APPROVER', 'FINANCE', 'ACCEPTOR', 'ARCHIVIST', 'ADMIN'].includes(normalizeRole(role))
 }
 
-export function canManagePaymentPlans(role) {
-  return ['PURCHASER', 'FINANCE', 'ADMIN'].includes(normalizeRole(role))
+export function canManagePaymentPlans(role, contract) {
+  const editableStatus = ['DRAFT', 'SUPPLIER_CONFIRMING', 'REJECTED', 'ACTIVE'].includes(contract?.status)
+  const unpaid = Number(contract?.paidAmount || 0) === 0 && contract?.paymentStatus === 'UNPAID'
+  return ['PURCHASER', 'ADMIN'].includes(normalizeRole(role)) && editableStatus && unpaid
 }
 
-export function canManageAttachments(role) {
-  return ['PURCHASER', 'ARCHIVIST', 'ADMIN'].includes(normalizeRole(role))
+export function canManageAttachments(role, contract) {
+  const editableStatus = !['CANCELLED', 'ARCHIVED'].includes(contract?.status)
+  return ['PURCHASER', 'FINANCE', 'ACCEPTOR', 'ARCHIVIST', 'ADMIN'].includes(normalizeRole(role)) && editableStatus
 }
 
 export function normalizeRole(role) {

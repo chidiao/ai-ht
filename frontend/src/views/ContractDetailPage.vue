@@ -110,7 +110,7 @@
         <section class="content-panel">
           <div class="section-title">
             <h2>付款计划</h2>
-            <el-button v-if="canManagePaymentPlans(currentRole)" type="primary" plain @click="openPaymentPlanDialog">新增计划</el-button>
+            <el-button v-if="canManagePaymentPlans(currentRole, detail.contract)" type="primary" plain @click="openPaymentPlanDialog">新增计划</el-button>
           </div>
           <el-table :data="detail.paymentPlans" border>
             <el-table-column prop="paymentStage" label="付款阶段" width="120" />
@@ -175,7 +175,7 @@
         <section class="content-panel">
           <div class="section-title">
             <h2>附件资料</h2>
-            <el-button v-if="canManageAttachments(currentRole)" type="primary" plain @click="attachmentVisible = true">新增附件</el-button>
+            <el-button v-if="canManageAttachments(currentRole, detail.contract)" type="primary" plain @click="attachmentVisible = true">新增附件</el-button>
           </div>
           <el-table :data="detail.attachments" border>
             <el-table-column prop="fileName" label="附件名称" min-width="220" show-overflow-tooltip />

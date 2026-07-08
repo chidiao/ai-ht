@@ -17,6 +17,7 @@
       <ContractTable
         :contracts="contracts"
         :loading="loading"
+        :can-edit-row="canEditRow"
         :can-delete-row="canDeleteRow"
         @detail="(row) => $router.push(`/contracts/${row.id}`)"
         @edit="(row) => $router.push(`/contracts/${row.id}/edit`)"
@@ -48,7 +49,7 @@ import ContractTable from '../components/ContractTable.vue'
 import PageHeader from '../components/PageHeader.vue'
 import { deleteContract, fetchContractPage } from '../api/contracts'
 import { useSession } from '../stores/session'
-import { canCreateContract, canDeleteContract, canExportContracts } from '../utils/permissions'
+import { canCreateContract, canDeleteContract, canEditContract, canExportContracts } from '../utils/permissions'
 import { paymentLabel, statusLabel } from '../utils/contractFormat'
 
 const { currentRole } = useSession()
@@ -121,6 +122,10 @@ function searchFromFirstPage() {
 
 function canDeleteRow(row) {
   return canDeleteContract(currentRole.value, row)
+}
+
+function canEditRow(row) {
+  return canEditContract(currentRole.value, row)
 }
 
 async function confirmDelete(row) {

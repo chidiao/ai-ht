@@ -200,8 +200,16 @@ public class ContractService {
     @Transactional
     public ContractPaymentPlan addPaymentPlan(Long id, ContractPaymentPlanRequest request) {
         Contract contract = findContract(id);
-        if (contract.getStatus() == ContractStatus.ARCHIVED || contract.getStatus() == ContractStatus.TERMINATED) {
-            throw new IllegalStateException("已归档或已终止的合同不能新增付款计划");
+        boolean editableStatus = contract.getStatus() == ContractStatus.DRAFT
+                || contract.getStatus() == ContractStatus.SUPPLIER_CONFIRMING
+                || contract.getStatus() == ContractStatus.REJECTED
+                || contract.getStatus() == ContractStatus.ACTIVE;
+        if (!editableStatus) {
+            throw new IllegalStateException("仅草稿、供应商确认中、已驳回或未付款的已生效合同允许新增付款计划");
+        }
+        BigDecimal paidAmount = contract.getPaidAmount() == null ? BigDecimal.ZERO : contract.getPaidAmount();
+        if (paidAmount.compareTo(BigDecimal.ZERO) > 0 || contract.getPaymentStatus() != PaymentStatus.UNPAID) {
+            throw new IllegalStateException("合同已有付款记录，不能新增付款计划");
         }
         if (request.plannedAmount().compareTo(contract.getAmount()) > 0) {
             throw new IllegalArgumentException("计划付款金额不能大于合同金额");
@@ -221,7 +229,10 @@ public class ContractService {
 
     @Transactional
     public ContractAttachment addAttachment(Long id, ContractAttachmentRequest request) {
-        findContract(id);
+        Contract contract = findContract(id);
+        if (contract.getStatus() == ContractStatus.CANCELLED || contract.getStatus() == ContractStatus.ARCHIVED) {
+            throw new IllegalStateException("已取消或已归档合同不能新增附件");
+        }
         return attachmentRepository.save(new ContractAttachment(
                 id,
                 request.fileName(),

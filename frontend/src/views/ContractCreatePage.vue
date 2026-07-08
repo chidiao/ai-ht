@@ -29,6 +29,8 @@ import AppLayout from '../components/AppLayout.vue'
 import ContractFormPanel from '../components/ContractFormPanel.vue'
 import PageHeader from '../components/PageHeader.vue'
 import { createContract, fetchContractDetail, updateContract } from '../api/contracts'
+import { useSession } from '../stores/session'
+import { canEditContract } from '../utils/permissions'
 
 const props = defineProps({
   id: {
@@ -38,6 +40,7 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const { currentRole } = useSession()
 const contract = ref(null)
 const saving = ref(false)
 const isEdit = computed(() => Boolean(props.id))
@@ -48,6 +51,11 @@ async function loadContract() {
   }
   try {
     const data = await fetchContractDetail(props.id)
+    if (!canEditContract(currentRole.value, data.contract)) {
+      ElMessage.warning('当前身份或合同状态不允许编辑')
+      router.replace(`/contracts/${props.id}`)
+      return
+    }
     contract.value = data.contract
   } catch (error) {
     ElMessage.error(error.response?.data?.message || '合同加载失败')
