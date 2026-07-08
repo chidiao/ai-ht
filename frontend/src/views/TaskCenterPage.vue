@@ -141,7 +141,7 @@ const modules = {
     title: '履约验收',
     eyebrow: 'Fulfillment',
     tableTitle: '履约任务',
-    description: '集中处理开始执行、登记验收和完成合同。',
+    description: '集中处理开始执行和登记验收；合同完成由管理员最终确认。',
     emptyText: '当前没有履约验收任务',
     emptyHint: '已生效和执行中的合同会进入履约验收工作台。',
     params: { statuses: ['ACTIVE', 'EXECUTING'] },

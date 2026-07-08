@@ -158,7 +158,7 @@ const roleProfiles = {
     ]
   },
   ACCEPTOR: {
-    description: '你主要负责启动履约、跟进交付、登记验收和确认合同完成。',
+    description: '你主要负责启动履约、跟进交付、登记验收并反馈履约结果。',
     focuses: [
       { label: '待启动', value: () => countByStatus('ACTIVE'), hint: '可开始执行', to: '/fulfillment' },
       { label: '执行中', value: () => stats.value.executing, hint: '跟进验收和完成', to: '/fulfillment' }
