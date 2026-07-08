@@ -24,6 +24,6 @@ const { login } = useSession()
 
 function loginAs(role) {
   login(role)
-  router.push('/contracts')
+  router.push('/dashboard')
 }
 </script>

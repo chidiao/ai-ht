@@ -3,8 +3,10 @@ export const statusOptions = [
   { value: 'SUPPLIER_CONFIRMING', label: '供应商确认' },
   { value: 'PENDING_APPROVAL', label: '待审批' },
   { value: 'REJECTED', label: '已驳回' },
+  { value: 'CANCELLED', label: '已取消' },
   { value: 'ACTIVE', label: '已生效' },
   { value: 'EXECUTING', label: '执行中' },
+  { value: 'TERMINATION_PENDING', label: '终止审批中' },
   { value: 'COMPLETED', label: '已完成' },
   { value: 'ARCHIVED', label: '已归档' },
   { value: 'TERMINATED', label: '已终止' }
@@ -36,19 +38,34 @@ export const archiveOptions = [
 ]
 
 export const actionOptions = {
-  DRAFT: [{ value: 'SUBMIT_SUPPLIER_CONFIRM', label: '提交供应商确认' }],
-  SUPPLIER_CONFIRMING: [{ value: 'SUBMIT_APPROVAL', label: '供应商确认并提交审批' }],
+  DRAFT: [
+    { value: 'SUBMIT_SUPPLIER_CONFIRM', label: '提交供应商确认' },
+    { value: 'CANCEL_PROCESS', label: '取消流程' }
+  ],
+  SUPPLIER_CONFIRMING: [
+    { value: 'SUBMIT_APPROVAL', label: '供应商确认并提交审批' },
+    { value: 'CANCEL_PROCESS', label: '取消流程' }
+  ],
   PENDING_APPROVAL: [
+    { value: 'WITHDRAW_APPROVAL', label: '撤回审批' },
     { value: 'APPROVE', label: '审批通过' },
     { value: 'REJECT', label: '审批驳回' }
   ],
+  REJECTED: [{ value: 'CANCEL_PROCESS', label: '取消流程' }],
   ACTIVE: [
     { value: 'START_EXECUTION', label: '开始执行' },
-    { value: 'REGISTER_PAYMENT', label: '登记付款' }
+    { value: 'REGISTER_PAYMENT', label: '登记付款' },
+    { value: 'REQUEST_TERMINATION', label: '发起终止申请' }
   ],
   EXECUTING: [
     { value: 'REGISTER_PAYMENT', label: '登记付款' },
-    { value: 'COMPLETE', label: '完成合同' }
+    { value: 'REGISTER_ACCEPTANCE', label: '登记验收' },
+    { value: 'COMPLETE', label: '完成合同' },
+    { value: 'REQUEST_TERMINATION', label: '发起终止申请' }
+  ],
+  TERMINATION_PENDING: [
+    { value: 'APPROVE_TERMINATION', label: '确认终止' },
+    { value: 'REJECT_TERMINATION', label: '驳回终止' }
   ],
   COMPLETED: [{ value: 'ARCHIVE', label: '归档' }]
 }

@@ -4,6 +4,7 @@ import ContractDetailPage from '../views/ContractDetailPage.vue'
 import ContractListPage from '../views/ContractListPage.vue'
 import DashboardPage from '../views/DashboardPage.vue'
 import LoginPage from '../views/LoginPage.vue'
+import TaskCenterPage from '../views/TaskCenterPage.vue'
 import { useSession } from '../stores/session'
 
 const routes = [
@@ -11,6 +12,10 @@ const routes = [
   { path: '/login', name: 'login', component: LoginPage, meta: { public: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardPage },
   { path: '/contracts', name: 'contracts', component: ContractListPage },
+  { path: '/approval', name: 'approval', component: TaskCenterPage, meta: { module: 'approval' } },
+  { path: '/finance', name: 'finance', component: TaskCenterPage, meta: { module: 'finance' } },
+  { path: '/fulfillment', name: 'fulfillment', component: TaskCenterPage, meta: { module: 'fulfillment' } },
+  { path: '/archive', name: 'archive', component: TaskCenterPage, meta: { module: 'archive' } },
   { path: '/contracts/new', name: 'contract-new', component: ContractCreatePage },
   { path: '/contracts/:id', name: 'contract-detail', component: ContractDetailPage, props: true },
   { path: '/contracts/:id/edit', name: 'contract-edit', component: ContractCreatePage, props: true }

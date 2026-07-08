@@ -48,6 +48,7 @@ const steps = [
   { status: 'PENDING_APPROVAL', label: '内部审批', description: '负责人审批生效' },
   { status: 'ACTIVE', label: '合同生效', description: '进入正式履约' },
   { status: 'EXECUTING', label: '履约执行', description: '跟进交付与验收' },
+  { status: 'TERMINATION_PENDING', label: '终止审批', description: '确认终止原因和结算方案' },
   { status: 'PAYING', label: '付款跟进', description: '登记付款进度' },
   { status: 'COMPLETED', label: '合同完成', description: '履约付款闭环' },
   { status: 'ARCHIVED', label: '归档', description: '完成档案沉淀' }
@@ -55,17 +56,21 @@ const steps = [
 
 const exceptionText = {
   REJECTED: '审批驳回，需返回编辑后重新提交。',
+  CANCELLED: '流程已取消，合同未进入正式履约。',
   TERMINATED: '合同已终止，流程不再继续。'
 }
 
-const isException = computed(() => ['REJECTED', 'TERMINATED'].includes(props.status))
+const isException = computed(() => ['REJECTED', 'CANCELLED', 'TERMINATED'].includes(props.status))
 
 const activeIndex = computed(() => {
   if (props.status === 'REJECTED') {
     return 2
   }
+  if (props.status === 'CANCELLED') {
+    return 0
+  }
   if (props.status === 'TERMINATED') {
-    return Math.max(0, steps.findIndex((item) => item.status === 'EXECUTING'))
+    return Math.max(0, steps.findIndex((item) => item.status === 'TERMINATION_PENDING'))
   }
   return Math.max(0, steps.findIndex((item) => item.status === props.status))
 })
@@ -112,7 +117,7 @@ const decoratedSteps = computed(() =>
 .workflow-track {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(8, minmax(96px, 1fr));
+    grid-template-columns: repeat(9, minmax(96px, 1fr));
   gap: 0;
   padding: 8px 8px 4px;
 }

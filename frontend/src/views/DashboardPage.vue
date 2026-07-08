@@ -4,11 +4,22 @@
       title="合同工作台"
       eyebrow="Dashboard"
       :breadcrumbs="[{ label: '首页' }]"
-    >
-      <el-button type="primary" :icon="Plus" :disabled="!canCreateContract(currentRole)" @click="$router.push('/contracts/new')">
-        新建合同
-      </el-button>
-    </PageHeader>
+    />
+
+    <section class="dashboard-welcome">
+      <div>
+        <p class="eyebrow">Welcome</p>
+        <h2>{{ greetingText }}</h2>
+        <span>{{ roleProfile.description }}</span>
+      </div>
+      <div class="role-focus-grid">
+        <button v-for="item in roleFocusItems" :key="item.label" type="button" @click="router.push(item.to)">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <small>{{ item.hint }}</small>
+        </button>
+      </div>
+    </section>
 
     <section class="dashboard-kpis">
       <button v-for="item in kpiItems" :key="item.key" type="button" @click="openStat(item.key)">
@@ -113,18 +124,68 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
 import AppLayout from '../components/AppLayout.vue'
 import PageHeader from '../components/PageHeader.vue'
 import { fetchContracts, fetchContractStats } from '../api/contracts'
 import { money, paymentLabel, statusLabel, statusType } from '../utils/contractFormat'
-import { canCreateContract } from '../utils/permissions'
 import { useSession } from '../stores/session'
 
 const router = useRouter()
-const { currentRole } = useSession()
+const { currentRole, currentRoleLabel, currentUserName } = useSession()
 const contracts = ref([])
 const stats = ref({ total: 0, pendingApproval: 0, executing: 0, pendingPayment: 0, expiringSoon: 0 })
+
+const roleProfiles = {
+  PURCHASER: {
+    description: '你主要负责合同拟稿、供应商确认、提交审批、取消流程和发起终止申请。',
+    focuses: [
+      { label: '我的合同入口', value: '合同管理', hint: '新建、查询和维护合同', to: '/contracts' },
+      { label: '待审批', value: () => stats.value.pendingApproval, hint: '关注已提交审批的合同', to: '/approval' }
+    ]
+  },
+  APPROVER: {
+    description: '你主要负责合同审批、审批驳回，以及生效后终止申请的确认。',
+    focuses: [
+      { label: '合同审批', value: () => countByStatus('PENDING_APPROVAL'), hint: '等待审批意见', to: '/approval' },
+      { label: '终止审批', value: () => countByStatus('TERMINATION_PENDING'), hint: '确认终止和结算意见', to: '/approval' }
+    ]
+  },
+  FINANCE: {
+    description: '你主要负责查看付款计划、登记付款、维护发票和付款进度。',
+    focuses: [
+      { label: '待付款', value: () => stats.value.pendingPayment, hint: '未结清合同', to: '/finance' },
+      { label: '部分付款', value: () => contracts.value.filter((item) => item.paymentStatus === 'PARTIAL').length, hint: '仍有后续款项', to: '/finance' }
+    ]
+  },
+  ACCEPTOR: {
+    description: '你主要负责启动履约、跟进交付、登记验收和确认合同完成。',
+    focuses: [
+      { label: '待启动', value: () => countByStatus('ACTIVE'), hint: '可开始执行', to: '/fulfillment' },
+      { label: '执行中', value: () => stats.value.executing, hint: '跟进验收和完成', to: '/fulfillment' }
+    ]
+  },
+  ARCHIVIST: {
+    description: '你主要负责核验合同正文、付款验收记录和完成归档。',
+    focuses: [
+      { label: '待归档', value: () => countByStatus('COMPLETED'), hint: '资料齐全后归档', to: '/archive' },
+      { label: '已归档', value: () => countByStatus('ARCHIVED'), hint: '已完成档案沉淀', to: '/contracts?status=ARCHIVED' }
+    ]
+  },
+  ADMIN: {
+    description: '你可以查看全部业务入口，用于演示、排查和跨角色处理。',
+    focuses: [
+      { label: '审批事项', value: () => countByStatus('PENDING_APPROVAL') + countByStatus('TERMINATION_PENDING'), hint: '合同审批和终止审批', to: '/approval' },
+      { label: '付款事项', value: () => stats.value.pendingPayment, hint: '财务待处理', to: '/finance' }
+    ]
+  }
+}
+
+const roleProfile = computed(() => roleProfiles[currentRole.value] || roleProfiles.ADMIN)
+const greetingText = computed(() => `${currentUserName.value || '你好'}，${currentRoleLabel.value}工作台`)
+const roleFocusItems = computed(() => roleProfile.value.focuses.map((item) => ({
+  ...item,
+  value: typeof item.value === 'function' ? item.value() : item.value
+})))
 
 const kpiItems = computed(() => [
   { key: 'total', label: '合同总数', value: stats.value.total, hint: '全部合同' },
@@ -169,6 +230,10 @@ const amountSummary = computed(() => {
   const paymentPercent = totalAmount ? Math.round((paidAmount / totalAmount) * 100) : 0
   return { totalAmount, paidAmount, pendingAmount, paymentPercent }
 })
+
+function countByStatus(status) {
+  return contracts.value.filter((item) => item.status === status).length
+}
 
 function openStat(key) {
   router.push({ path: '/contracts', query: { quick: key } })

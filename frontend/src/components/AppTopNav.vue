@@ -1,6 +1,6 @@
 <template>
   <header class="topnav">
-    <button class="brand" @click="$router.push('/contracts')">
+    <button class="brand" @click="$router.push('/dashboard')">
       <span class="brand-mark">CM</span>
       <div>
         <strong>采购合同管理系统</strong>

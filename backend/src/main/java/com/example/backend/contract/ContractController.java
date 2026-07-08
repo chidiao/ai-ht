@@ -1,10 +1,15 @@
 package com.example.backend.contract;
 
 import com.example.backend.contract.dto.ContractActionRequest;
+import com.example.backend.contract.dto.ContractAcceptanceRequest;
+import com.example.backend.contract.dto.ContractAttachmentRequest;
 import com.example.backend.contract.dto.ContractDetailResponse;
+import com.example.backend.contract.dto.ContractPageResponse;
+import com.example.backend.contract.dto.ContractPaymentPlanRequest;
 import com.example.backend.contract.dto.ContractRequest;
 import com.example.backend.contract.dto.ContractStatsResponse;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,7 +33,7 @@ public class ContractController {
     }
 
     @GetMapping
-    public List<Contract> search(
+    public ContractPageResponse search(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String supplierName,
             @RequestParam(required = false) String owner,
@@ -45,10 +50,12 @@ public class ContractController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueStart,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueEnd,
             @RequestParam(required = false) Boolean expiringSoon,
-            @RequestParam(required = false) String quickFilter
+            @RequestParam(required = false) String quickFilter,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         return contractService.search(keyword, supplierName, owner, department, category, status, statuses, paymentStatus,
-                archiveStatus, amountMin, amountMax, signStart, signEnd, dueStart, dueEnd, expiringSoon, quickFilter);
+                archiveStatus, amountMin, amountMax, signStart, signEnd, dueStart, dueEnd, expiringSoon, quickFilter, page, size);
     }
 
     @GetMapping("/{id}")
@@ -64,6 +71,26 @@ public class ContractController {
     @PutMapping("/{id}")
     public Contract update(@PathVariable Long id, @Valid @RequestBody ContractRequest request) {
         return contractService.update(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {
+        contractService.delete(id);
+    }
+
+    @PostMapping("/{id}/payment-plans")
+    public ContractPaymentPlan addPaymentPlan(@PathVariable Long id, @Valid @RequestBody ContractPaymentPlanRequest request) {
+        return contractService.addPaymentPlan(id, request);
+    }
+
+    @PostMapping("/{id}/attachments")
+    public ContractAttachment addAttachment(@PathVariable Long id, @Valid @RequestBody ContractAttachmentRequest request) {
+        return contractService.addAttachment(id, request);
+    }
+
+    @PostMapping("/{id}/acceptances")
+    public ContractAcceptanceRecord addAcceptance(@PathVariable Long id, @Valid @RequestBody ContractAcceptanceRequest request) {
+        return contractService.addAcceptance(id, request);
     }
 
     @PostMapping("/{id}/action")

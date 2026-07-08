@@ -20,6 +20,7 @@ public class ContractPaymentRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long contractId;
+    private Long paymentPlanId;
     private String paymentStage;
 
     @NotNull
@@ -61,6 +62,8 @@ public class ContractPaymentRecord {
     public void setId(Long id) { this.id = id; }
     public Long getContractId() { return contractId; }
     public void setContractId(Long contractId) { this.contractId = contractId; }
+    public Long getPaymentPlanId() { return paymentPlanId; }
+    public void setPaymentPlanId(Long paymentPlanId) { this.paymentPlanId = paymentPlanId; }
     public String getPaymentStage() { return paymentStage; }
     public void setPaymentStage(String paymentStage) { this.paymentStage = paymentStage; }
     public BigDecimal getAmount() { return amount; }

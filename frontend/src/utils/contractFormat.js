@@ -21,7 +21,10 @@ export function archiveLabel(value) {
 }
 
 export function actionLabel(value) {
-  const allActions = Object.values(actionOptions).flat().concat({ value: 'TERMINATE', label: '终止合同' })
+  const allActions = Object.values(actionOptions).flat().concat(
+    { value: 'REGISTER_ACCEPTANCE', label: '登记验收' },
+    { value: 'TERMINATE', label: '终止合同' }
+  )
   return allActions.find((item) => item.value === value)?.label || value
 }
 
@@ -31,8 +34,10 @@ export function statusType(value) {
     SUPPLIER_CONFIRMING: 'warning',
     PENDING_APPROVAL: 'warning',
     REJECTED: 'danger',
+    CANCELLED: 'info',
     ACTIVE: 'success',
     EXECUTING: 'primary',
+    TERMINATION_PENDING: 'warning',
     COMPLETED: 'success',
     ARCHIVED: 'info',
     TERMINATED: 'danger'
@@ -61,16 +66,13 @@ export function formatDateTime(value) {
 export function availableActions(row) {
   let actions = [...(actionOptions[row.status] || [])]
   if (isExpiredBeforeEffective(row)) {
-    actions = []
+    actions = actions.filter((action) => ['CANCEL_PROCESS', 'WITHDRAW_APPROVAL', 'REJECT'].includes(action.value))
   }
   if (row.status === 'EXECUTING' && row.paymentStatus !== 'PAID') {
     actions = actions.filter((action) => action.value !== 'COMPLETE')
   }
   if (['ACTIVE', 'EXECUTING'].includes(row.status) && row.paymentStatus === 'PAID') {
     actions = actions.filter((action) => action.value !== 'REGISTER_PAYMENT')
-  }
-  if (!['COMPLETED', 'ARCHIVED', 'TERMINATED'].includes(row.status)) {
-    actions.push({ value: 'TERMINATE', label: '终止合同' })
   }
   return actions
 }

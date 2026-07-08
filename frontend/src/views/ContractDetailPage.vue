@@ -18,6 +18,8 @@
       <template v-if="detail.contract">
         <WorkflowProgress :status="detail.contract.status" />
 
+        <el-tabs class="detail-tabs" model-value="overview">
+          <el-tab-pane label="概览" name="overview">
         <section class="content-panel">
           <div class="section-title">
             <h2>可执行动作</h2>
@@ -27,7 +29,7 @@
             <el-button
               v-for="action in permittedActions"
               :key="action.value"
-              :type="action.value === 'REJECT' || action.value === 'TERMINATE' ? 'danger' : 'primary'"
+              :type="dangerActions.includes(action.value) ? 'danger' : 'primary'"
               plain
               @click="openAction(action)"
             >
@@ -102,6 +104,34 @@
             <el-descriptions-item label="备注" :span="3">{{ detail.contract.remark || '-' }}</el-descriptions-item>
           </el-descriptions>
         </section>
+          </el-tab-pane>
+
+          <el-tab-pane label="付款" name="payment">
+        <section class="content-panel">
+          <div class="section-title">
+            <h2>付款计划</h2>
+            <el-button v-if="canManagePaymentPlans(currentRole)" type="primary" plain @click="openPaymentPlanDialog">新增计划</el-button>
+          </div>
+          <el-table :data="detail.paymentPlans" border>
+            <el-table-column prop="paymentStage" label="付款阶段" width="120" />
+            <el-table-column prop="plannedRatio" label="比例" width="100">
+              <template #default="{ row }">{{ row.plannedRatio ?? '-' }}%</template>
+            </el-table-column>
+            <el-table-column prop="plannedAmount" label="计划金额" width="140">
+              <template #default="{ row }">{{ money(row.plannedAmount) }}</template>
+            </el-table-column>
+            <el-table-column prop="paidAmount" label="计划已付" width="140">
+              <template #default="{ row }">{{ money(row.paidAmount) }}</template>
+            </el-table-column>
+            <el-table-column label="计划状态" width="110">
+              <template #default="{ row }">
+                <el-tag :type="paymentPlanStatus(row).type">{{ paymentPlanStatus(row).label }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="plannedDate" label="计划日期" width="130" />
+            <el-table-column prop="paymentCondition" label="付款条件" min-width="220" show-overflow-tooltip />
+          </el-table>
+        </section>
 
         <section class="content-panel">
           <div class="section-title">
@@ -122,11 +152,13 @@
             <el-table-column prop="note" label="付款说明" min-width="220" show-overflow-tooltip />
           </el-table>
         </section>
+          </el-tab-pane>
 
+          <el-tab-pane label="验收" name="acceptance">
         <section class="content-panel">
           <div class="section-title">
             <h2>验收记录</h2>
-            <span>{{ detail.acceptanceRecords.length }} 条记录</span>
+            <el-button v-if="canRegisterAcceptance" type="primary" plain @click="acceptanceVisible = true">登记验收</el-button>
           </div>
           <el-table :data="detail.acceptanceRecords" border>
             <el-table-column prop="deliveryDate" label="交付日期" width="130" />
@@ -137,7 +169,27 @@
             <el-table-column prop="exceptionNote" label="异常说明" min-width="180" show-overflow-tooltip />
           </el-table>
         </section>
+          </el-tab-pane>
 
+          <el-tab-pane label="附件" name="attachments">
+        <section class="content-panel">
+          <div class="section-title">
+            <h2>附件资料</h2>
+            <el-button v-if="canManageAttachments(currentRole)" type="primary" plain @click="attachmentVisible = true">新增附件</el-button>
+          </div>
+          <el-table :data="detail.attachments" border>
+            <el-table-column prop="fileName" label="附件名称" min-width="220" show-overflow-tooltip />
+            <el-table-column prop="fileType" label="类型" width="130" />
+            <el-table-column prop="uploader" label="上传人" width="110" />
+            <el-table-column prop="uploadedAt" label="上传时间" width="170">
+              <template #default="{ row }">{{ formatDateTime(row.uploadedAt) }}</template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+          </el-table>
+        </section>
+          </el-tab-pane>
+
+          <el-tab-pane label="流程日志" name="logs">
         <section class="content-panel">
           <div class="section-title">
             <h2>流程记录</h2>
@@ -165,6 +217,8 @@
             </article>
           </div>
         </section>
+          </el-tab-pane>
+        </el-tabs>
       </template>
 
     <ContractActionDialog
@@ -173,8 +227,64 @@
       :action="currentAction"
       :saving="saving"
       :operator-name="currentUserName"
+      :payment-plans="detail.paymentPlans"
       @submit="submitAction"
     />
+
+    <el-dialog v-model="paymentPlanVisible" title="新增付款计划" width="560px">
+      <el-form :model="paymentPlanForm" label-width="112px">
+        <el-form-item label="付款阶段"><el-input v-model="paymentPlanForm.paymentStage" /></el-form-item>
+        <el-form-item label="付款比例"><el-input-number v-model="paymentPlanForm.plannedRatio" :min="0" :max="100" :precision="2" @change="syncPaymentPlanAmount" /></el-form-item>
+        <el-form-item label="计划金额"><el-input-number v-model="paymentPlanForm.plannedAmount" :min="0" :max="Number(detail.contract?.amount || 0)" :precision="2" @change="syncPaymentPlanRatio" /></el-form-item>
+        <el-form-item label="计划日期"><el-date-picker v-model="paymentPlanForm.plannedDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
+        <el-form-item label="付款条件"><el-input v-model="paymentPlanForm.paymentCondition" type="textarea" :rows="3" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="paymentPlanVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitPaymentPlan">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="acceptanceVisible" title="登记验收" width="560px">
+      <el-form :model="acceptanceForm" label-width="112px">
+        <el-form-item label="交付日期"><el-date-picker v-model="acceptanceForm.deliveryDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
+        <el-form-item label="验收日期"><el-date-picker v-model="acceptanceForm.acceptanceDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
+        <el-form-item label="验收结论">
+          <el-select v-model="acceptanceForm.acceptanceResult">
+            <el-option label="验收通过" value="验收通过" />
+            <el-option label="有条件通过" value="有条件通过" />
+            <el-option label="验收不通过" value="验收不通过" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="验收说明"><el-input v-model="acceptanceForm.acceptanceNote" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item label="异常说明"><el-input v-model="acceptanceForm.exceptionNote" type="textarea" :rows="2" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="acceptanceVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitAcceptance">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="attachmentVisible" title="新增附件" width="520px">
+      <el-form :model="attachmentForm" label-width="96px">
+        <el-form-item label="附件名称"><el-input v-model="attachmentForm.fileName" /></el-form-item>
+        <el-form-item label="附件类型">
+          <el-select v-model="attachmentForm.fileType">
+            <el-option label="合同正文" value="合同正文" />
+            <el-option label="报价单" value="报价单" />
+            <el-option label="审批材料" value="审批材料" />
+            <el-option label="发票" value="发票" />
+            <el-option label="验收单" value="验收单" />
+            <el-option label="补充协议" value="补充协议" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注"><el-input v-model="attachmentForm.remark" type="textarea" :rows="3" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="attachmentVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitAttachment">保存</el-button>
+      </template>
+    </el-dialog>
   </AppLayout>
 </template>
 
@@ -185,9 +295,9 @@ import AppLayout from '../components/AppLayout.vue'
 import ContractActionDialog from '../components/ContractActionDialog.vue'
 import PageHeader from '../components/PageHeader.vue'
 import WorkflowProgress from '../components/WorkflowProgress.vue'
-import { fetchContractDetail, runContractAction } from '../api/contracts'
+import { addContractAcceptance, addContractAttachment, addContractPaymentPlan, fetchContractDetail, runContractAction } from '../api/contracts'
 import { useSession } from '../stores/session'
-import { canEditContract, canRunAction } from '../utils/permissions'
+import { canEditContract, canManageAttachments, canManagePaymentPlans, canRunAction } from '../utils/permissions'
 import {
   actionLabel,
   approvalLabel,
@@ -209,33 +319,106 @@ const props = defineProps({
 })
 
 const { currentRole, currentRoleLabel, currentUserName } = useSession()
-const detail = reactive({ contract: null, paymentRecords: [], acceptanceRecords: [], logs: [] })
+const detail = reactive({ contract: null, paymentPlans: [], paymentRecords: [], acceptanceRecords: [], attachments: [], logs: [] })
 const actionVisible = ref(false)
+const paymentPlanVisible = ref(false)
+const acceptanceVisible = ref(false)
+const attachmentVisible = ref(false)
 const currentAction = ref(null)
 const saving = ref(false)
+const paymentPlanForm = reactive({ paymentStage: '验收款', plannedRatio: 70, plannedAmount: 0, plannedDate: '', paymentCondition: '验收通过后支付' })
+const acceptanceForm = reactive({ deliveryDate: '', acceptanceDate: '', acceptanceResult: '验收通过', acceptanceNote: '', exceptionNote: '' })
+const attachmentForm = reactive({ fileName: '', fileType: '合同正文', remark: '' })
+const dangerActions = ['REJECT', 'CANCEL_PROCESS', 'REQUEST_TERMINATION', 'APPROVE_TERMINATION', 'REJECT_TERMINATION']
 
 const permittedActions = computed(() => {
   if (!detail.contract) {
     return []
   }
-  return availableActions(detail.contract).filter((action) => canRunAction(currentRole.value, action.value))
+  return availableActions(detail.contract)
+    .filter((action) => action.value !== 'REGISTER_ACCEPTANCE' || detail.acceptanceRecords.length === 0)
+    .filter((action) => action.value !== 'COMPLETE' || detail.acceptanceRecords.length > 0)
+    .filter((action) => canRunAction(currentRole.value, action.value))
 })
+
+const canRegisterAcceptance = computed(() => ['EXECUTING', 'COMPLETED'].includes(detail.contract?.status) && canRunAction(currentRole.value, 'REGISTER_ACCEPTANCE'))
 
 async function loadDetail() {
   try {
     const data = await fetchContractDetail(props.id)
     detail.contract = data.contract
+    detail.paymentPlans = data.paymentPlans || []
     detail.paymentRecords = data.paymentRecords || []
     detail.acceptanceRecords = data.acceptanceRecords || []
+    detail.attachments = data.attachments || []
     detail.logs = data.logs
   } catch (error) {
     ElMessage.error(error.response?.data?.message || '详情加载失败')
   }
 }
 
+async function submitPaymentPlan() {
+  try {
+    syncPaymentPlanAmount()
+    await addContractPaymentPlan(props.id, { ...paymentPlanForm, creator: currentUserName.value })
+    ElMessage.success('付款计划已新增')
+    paymentPlanVisible.value = false
+    await loadDetail()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '付款计划保存失败')
+  }
+}
+
+function syncPaymentPlanAmount() {
+  const contractAmount = Number(detail.contract?.amount || 0)
+  if (!contractAmount) {
+    return
+  }
+  paymentPlanForm.plannedAmount = roundMoney(contractAmount * Number(paymentPlanForm.plannedRatio || 0) / 100)
+}
+
+function syncPaymentPlanRatio() {
+  const contractAmount = Number(detail.contract?.amount || 0)
+  if (!contractAmount) {
+    return
+  }
+  paymentPlanForm.plannedRatio = roundMoney(Number(paymentPlanForm.plannedAmount || 0) / contractAmount * 100)
+}
+
+function roundMoney(value) {
+  return Math.round(Number(value || 0) * 100) / 100
+}
+
+async function submitAcceptance() {
+  try {
+    await addContractAcceptance(props.id, { ...acceptanceForm, accepter: currentUserName.value })
+    ElMessage.success('验收记录已登记')
+    acceptanceVisible.value = false
+    await loadDetail()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '验收保存失败')
+  }
+}
+
+async function submitAttachment() {
+  try {
+    await addContractAttachment(props.id, { ...attachmentForm, uploader: currentUserName.value })
+    ElMessage.success('附件记录已新增')
+    attachmentVisible.value = false
+    await loadDetail()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '附件保存失败')
+  }
+}
+
 function openAction(action) {
   currentAction.value = action
   actionVisible.value = true
+}
+
+function openPaymentPlanDialog() {
+  syncPaymentPlanAmount()
+  paymentPlanVisible.value = true
 }
 
 function splitComment(comment) {
@@ -245,14 +428,41 @@ function splitComment(comment) {
   return comment.split('；').filter(Boolean)
 }
 
+function paymentPlanStatus(plan) {
+  const paidAmount = Number(plan.paidAmount || 0)
+  const plannedAmount = Number(plan.plannedAmount || 0)
+  if (plannedAmount > 0 && paidAmount >= plannedAmount) {
+    return { label: '已付清', type: 'success' }
+  }
+  if (paidAmount > 0) {
+    return { label: '部分付款', type: 'warning' }
+  }
+  return { label: '未付款', type: 'info' }
+}
+
 async function submitAction(actionForm) {
   saving.value = true
   try {
+    if (currentAction.value.value === 'REGISTER_ACCEPTANCE') {
+      await addContractAcceptance(props.id, {
+        deliveryDate: actionForm.deliveryDate,
+        acceptanceDate: actionForm.acceptanceDate,
+        acceptanceResult: actionForm.acceptanceResult,
+        acceptanceNote: actionForm.comment,
+        exceptionNote: actionForm.exceptionNote,
+        accepter: actionForm.operator
+      })
+      ElMessage.success('验收记录已登记')
+      actionVisible.value = false
+      await loadDetail()
+      return
+    }
     await runContractAction(props.id, {
       action: currentAction.value.value,
       operator: actionForm.operator,
       comment: actionForm.comment,
       paidAmount: currentAction.value.value === 'REGISTER_PAYMENT' ? actionForm.paidAmount : undefined,
+      paymentPlanId: actionForm.paymentPlanId,
       paymentStage: actionForm.paymentStage,
       paymentDate: actionForm.paymentDate,
       invoiceNo: actionForm.invoiceNo,
@@ -279,6 +489,16 @@ loadDetail()
   position: relative;
   display: grid;
   gap: 14px;
+}
+
+.detail-tabs {
+  margin-top: 18px;
+}
+
+:deep(.el-dialog .el-input-number),
+:deep(.el-dialog .el-date-editor),
+:deep(.el-dialog .el-select) {
+  width: 100%;
 }
 
 .status-strip {

@@ -416,9 +416,49 @@ h3 {
   padding: 12px;
 }
 
+.table-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
 .content-panel {
   padding: 20px;
   margin-bottom: 22px;
+}
+
+.task-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.task-summary-card {
+  min-height: 92px;
+  padding: 16px;
+  border: 1px solid #dde4ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.task-summary-card span,
+.task-summary-card small {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.task-summary-card strong {
+  display: block;
+  margin: 8px 0 6px;
+  color: #0f172a;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.task-row-actions {
+  flex-wrap: wrap;
 }
 
 .section-title {
@@ -491,6 +531,73 @@ h3 {
   grid-template-columns: repeat(4, minmax(150px, 1fr));
   gap: 14px;
   margin-bottom: 22px;
+}
+
+.dashboard-welcome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.9fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 22px;
+  padding: 20px;
+  border: 1px solid #dde4ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.dashboard-welcome h2 {
+  margin-bottom: 10px;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.dashboard-welcome span {
+  display: block;
+  max-width: 720px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.role-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.role-focus-grid button {
+  min-height: 94px;
+  padding: 14px;
+  border: 1px solid #dde4ee;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.role-focus-grid button:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  box-shadow: 0 14px 28px rgb(15 23 42 / 7%);
+}
+
+.role-focus-grid span,
+.role-focus-grid small {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.role-focus-grid strong {
+  display: block;
+  margin: 7px 0 5px;
+  color: #0f172a;
+  font-size: 24px;
+  line-height: 1.1;
 }
 
 .dashboard-kpis button {
@@ -708,6 +815,10 @@ h3 {
   .dashboard-grid--wide {
     grid-template-columns: 1fr;
   }
+
+  .dashboard-welcome {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -759,6 +870,8 @@ h3 {
   .stats-grid,
   .query-grid,
   .dashboard-kpis,
+  .role-focus-grid,
+  .task-summary,
   .form-grid,
   .role-grid {
     grid-template-columns: 1fr;

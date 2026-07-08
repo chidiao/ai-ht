@@ -12,6 +12,7 @@ public record ContractActionRequest(
         @NotBlank String operator,
         String comment,
         BigDecimal paidAmount,
+        Long paymentPlanId,
         String paymentStage,
         LocalDate paymentDate,
         String invoiceNo,

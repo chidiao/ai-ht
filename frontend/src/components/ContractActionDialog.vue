@@ -31,6 +31,21 @@
         </el-form-item>
       </template>
 
+      <template v-else-if="action?.value === 'CANCEL_PROCESS'">
+        <el-alert class="action-alert" type="warning" :closable="false" show-icon>
+          <template #title>取消用于合同未正式生效前的流程中止，取消后不再继续提交或审批。</template>
+        </el-alert>
+        <el-form-item label="取消原因">
+          <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="说明需求取消、供应商不配合或条款变更等原因" />
+        </el-form-item>
+      </template>
+
+      <template v-else-if="action?.value === 'WITHDRAW_APPROVAL'">
+        <el-form-item label="撤回原因">
+          <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="说明需补充或调整的合同内容" />
+        </el-form-item>
+      </template>
+
       <template v-else-if="action?.value === 'APPROVE' || action?.value === 'REJECT'">
         <el-form-item label="审批意见">
           <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="填写审批意见" />
@@ -64,14 +79,18 @@
             <strong>{{ formatMoney(remainingAmount) }}</strong>
           </div>
         </div>
-        <el-form-item label="付款阶段">
-          <el-select v-model="actionForm.paymentStage">
-            <el-option label="预付款" value="预付款" />
-            <el-option label="到货款" value="到货款" />
-            <el-option label="验收款" value="验收款" />
-            <el-option label="尾款" value="尾款" />
-            <el-option label="其他" value="其他" />
+        <el-form-item label="付款计划">
+          <el-select v-model="actionForm.paymentPlanId" clearable placeholder="选择计划或手动填写" @change="applyPaymentPlan">
+            <el-option
+              v-for="plan in unpaidPaymentPlans"
+              :key="plan.id"
+              :label="`${plan.paymentStage} · 剩余 ${formatMoney(paymentPlanRemaining(plan))}`"
+              :value="plan.id"
+            />
           </el-select>
+        </el-form-item>
+        <el-form-item label="付款阶段">
+          <el-input v-model="actionForm.paymentStage" placeholder="例如：预付款、验收款、尾款" />
         </el-form-item>
         <el-form-item label="本次付款金额">
           <el-input-number v-model="actionForm.paidAmount" :min="0" :max="remainingAmount" :precision="2" :step="1000" />
@@ -87,7 +106,7 @@
         </el-form-item>
       </template>
 
-      <template v-else-if="action?.value === 'COMPLETE'">
+      <template v-else-if="action?.value === 'REGISTER_ACCEPTANCE'">
         <el-form-item label="交付日期">
           <el-date-picker v-model="actionForm.deliveryDate" type="date" value-format="YYYY-MM-DD" />
         </el-form-item>
@@ -100,11 +119,17 @@
             <el-option label="有条件通过" value="有条件通过" />
           </el-select>
         </el-form-item>
-        <el-form-item label="完成说明">
+        <el-form-item label="验收说明">
           <el-input v-model="actionForm.comment" type="textarea" :rows="3" />
         </el-form-item>
         <el-form-item label="异常说明">
           <el-input v-model="actionForm.exceptionNote" type="textarea" :rows="2" />
+        </el-form-item>
+      </template>
+
+      <template v-else-if="action?.value === 'COMPLETE'">
+        <el-form-item label="完成说明">
+          <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="确认付款和验收已完成，关闭合同履约流程" />
         </el-form-item>
       </template>
 
@@ -120,12 +145,21 @@
         </el-form-item>
       </template>
 
-      <template v-else-if="action?.value === 'TERMINATE'">
-        <el-form-item label="终止日期">
+      <template v-else-if="action?.value === 'REQUEST_TERMINATION'">
+        <el-alert class="action-alert" type="warning" :closable="false" show-icon>
+          <template #title>终止申请会进入审批，需说明终止原因、责任和已付款结算情况。</template>
+        </el-alert>
+        <el-form-item label="申请日期">
           <el-date-picker v-model="actionForm.terminateDate" type="date" value-format="YYYY-MM-DD" />
         </el-form-item>
-        <el-form-item label="终止原因">
-          <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="说明终止原因" />
+        <el-form-item label="申请说明">
+          <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="必填，例如：供应商无法按期交付，双方确认终止并按已完成部分结算" />
+        </el-form-item>
+      </template>
+
+      <template v-else-if="action?.value === 'APPROVE_TERMINATION' || action?.value === 'REJECT_TERMINATION'">
+        <el-form-item label="审批意见">
+          <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="说明是否同意终止，以及付款、交付、责任处理意见" />
         </el-form-item>
       </template>
     </el-form>
@@ -138,6 +172,7 @@
 </template>
 
 <script setup>
+import { ElMessage } from 'element-plus'
 import { computed, reactive, watch } from 'vue'
 
 const props = defineProps({
@@ -156,13 +191,19 @@ const props = defineProps({
   operatorName: {
     type: String,
     default: ''
+  },
+  paymentPlans: {
+    type: Array,
+    default: () => []
   }
 })
 
 const emit = defineEmits(['submit'])
 const visible = defineModel({ required: true })
 const actionForm = reactive(emptyActionForm())
+const requiredCommentActions = ['CANCEL_PROCESS', 'WITHDRAW_APPROVAL', 'REQUEST_TERMINATION', 'APPROVE_TERMINATION', 'REJECT_TERMINATION']
 const remainingAmount = computed(() => Math.max(Number(props.contract?.amount || 0) - Number(props.contract?.paidAmount || 0), 0))
+const unpaidPaymentPlans = computed(() => props.paymentPlans.filter((item) => paymentPlanRemaining(item) > 0))
 
 watch(
   () => [visible.value, props.contract, props.action],
@@ -175,16 +216,21 @@ watch(
 )
 
 function submit() {
+  if (requiredCommentActions.includes(props.action?.value) && !actionForm.comment.trim()) {
+    ElMessage.warning('请填写操作原因或审批意见')
+    return
+  }
   emit('submit', {
     operator: actionForm.operator,
     paidAmount: props.action?.value === 'REGISTER_PAYMENT' ? actionForm.paidAmount : undefined,
+    paymentPlanId: props.action?.value === 'REGISTER_PAYMENT' && actionForm.paymentPlanId ? actionForm.paymentPlanId : undefined,
     paymentStage: props.action?.value === 'REGISTER_PAYMENT' ? actionForm.paymentStage : undefined,
     paymentDate: props.action?.value === 'REGISTER_PAYMENT' ? actionForm.paymentDate : undefined,
     invoiceNo: props.action?.value === 'REGISTER_PAYMENT' ? actionForm.invoiceNo : undefined,
-    deliveryDate: props.action?.value === 'COMPLETE' ? actionForm.deliveryDate : undefined,
-    acceptanceDate: props.action?.value === 'COMPLETE' ? actionForm.acceptanceDate : undefined,
-    acceptanceResult: props.action?.value === 'COMPLETE' ? actionForm.acceptanceResult : undefined,
-    exceptionNote: props.action?.value === 'COMPLETE' ? actionForm.exceptionNote : undefined,
+    deliveryDate: props.action?.value === 'REGISTER_ACCEPTANCE' ? actionForm.deliveryDate : undefined,
+    acceptanceDate: props.action?.value === 'REGISTER_ACCEPTANCE' ? actionForm.acceptanceDate : undefined,
+    acceptanceResult: props.action?.value === 'REGISTER_ACCEPTANCE' ? actionForm.acceptanceResult : undefined,
+    exceptionNote: props.action?.value === 'REGISTER_ACCEPTANCE' ? actionForm.exceptionNote : undefined,
     comment: buildComment()
   })
 }
@@ -194,6 +240,7 @@ function defaultsForAction() {
   return {
     operator: props.operatorName || '',
     paidAmount: props.action?.value === 'REGISTER_PAYMENT' ? remainingAmount.value : 0,
+    paymentPlanId: '',
     paymentStage: '验收款',
     expectedConfirmDate: formatDate(addDays(new Date(), 3)),
     confirmMethod: '邮件确认',
@@ -219,6 +266,10 @@ function buildComment() {
     lines.push(`发送方式：${actionForm.confirmMethod || '-'}`)
   } else if (action === 'SUBMIT_APPROVAL') {
     lines.push(`审批负责人：${actionForm.approver || '-'}`)
+  } else if (action === 'CANCEL_PROCESS') {
+    lines.push(`取消原因：${actionForm.comment || '-'}`)
+  } else if (action === 'WITHDRAW_APPROVAL') {
+    lines.push(`撤回原因：${actionForm.comment || '-'}`)
   } else if (action === 'START_EXECUTION') {
     lines.push(`执行负责人：${actionForm.executionOwner || '-'}`)
     lines.push(`计划交付日期：${actionForm.plannedDeliveryDate || '-'}`)
@@ -227,7 +278,7 @@ function buildComment() {
     lines.push(`付款阶段：${actionForm.paymentStage || '-'}`)
     lines.push(`付款日期：${actionForm.paymentDate || '-'}`)
     lines.push(`发票编号：${actionForm.invoiceNo || '-'}`)
-  } else if (action === 'COMPLETE') {
+  } else if (action === 'REGISTER_ACCEPTANCE') {
     lines.push(`交付日期：${actionForm.deliveryDate || '-'}`)
     lines.push(`验收日期：${actionForm.acceptanceDate || '-'}`)
     lines.push(`验收结论：${actionForm.acceptanceResult || '-'}`)
@@ -237,10 +288,12 @@ function buildComment() {
   } else if (action === 'ARCHIVE') {
     lines.push(`归档编号：${actionForm.archiveNo || '-'}`)
     lines.push(`归档位置：${actionForm.archiveLocation || '-'}`)
-  } else if (action === 'TERMINATE') {
-    lines.push(`终止日期：${actionForm.terminateDate || '-'}`)
+  } else if (action === 'REQUEST_TERMINATION') {
+    lines.push(`申请日期：${actionForm.terminateDate || '-'}`)
+  } else if (action === 'APPROVE_TERMINATION' || action === 'REJECT_TERMINATION') {
+    lines.push(`审批意见：${actionForm.comment || '-'}`)
   }
-  if (actionForm.comment) {
+  if (actionForm.comment && !['CANCEL_PROCESS', 'WITHDRAW_APPROVAL', 'APPROVE_TERMINATION', 'REJECT_TERMINATION'].includes(action)) {
     lines.push(`说明：${actionForm.comment}`)
   }
   return lines.join('；')
@@ -251,6 +304,7 @@ function emptyActionForm() {
     operator: '',
     comment: '',
     paidAmount: 0,
+    paymentPlanId: '',
     paymentStage: '',
     supplierContact: '',
     expectedConfirmDate: '',
@@ -282,6 +336,19 @@ function formatDate(date) {
 
 function formatMoney(value) {
   return Number(value || 0).toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' })
+}
+
+function paymentPlanRemaining(plan) {
+  return Math.max(Number(plan?.plannedAmount || 0) - Number(plan?.paidAmount || 0), 0)
+}
+
+function applyPaymentPlan(planId) {
+  const plan = props.paymentPlans.find((item) => item.id === planId)
+  if (!plan) {
+    return
+  }
+  actionForm.paymentStage = plan.paymentStage
+  actionForm.paidAmount = Math.min(paymentPlanRemaining(plan), remainingAmount.value)
 }
 </script>
 
@@ -341,5 +408,9 @@ function formatMoney(value) {
 :deep(.el-date-editor),
 :deep(.el-select) {
   width: 100%;
+}
+
+.action-alert {
+  margin-bottom: 16px;
 }
 </style>
