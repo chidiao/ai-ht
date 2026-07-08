@@ -1,0 +1,16 @@
+# Repository-local workspace files
+/.agents/
+/.codex/
+
+# Root-level local environment
+/.env
+/.env.*
+!/.env.example
+
+# Root-level editor metadata
+/.idea/
+/.vscode/
+
+# OS metadata
+.DS_Store
+Thumbs.db
