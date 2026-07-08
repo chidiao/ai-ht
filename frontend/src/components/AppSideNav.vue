@@ -14,9 +14,13 @@
         <span>新建合同</span>
       </el-menu-item>
     </el-menu>
+    <a class="resume-link" href="https://me.chidiao.xin/" target="_blank" rel="noopener noreferrer">
+      <el-icon><User /></el-icon>
+      <span>个人简历</span>
+    </a>
   </aside>
 </template>
 
 <script setup>
-import { CirclePlus, DataBoard, Document } from '@element-plus/icons-vue'
+import { CirclePlus, DataBoard, Document, User } from '@element-plus/icons-vue'
 </script>
