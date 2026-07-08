@@ -312,6 +312,15 @@ public class ContractService {
             }
             return ContractStatus.SUPPLIER_CONFIRMING;
         }
+        if (request.action() == ContractAction.TERMINATE) {
+            if (contract.getStatus() != ContractStatus.ACTIVE && contract.getStatus() != ContractStatus.EXECUTING) {
+                throw new IllegalStateException("仅已生效或执行中的合同允许终止");
+            }
+            if (!hasText(request.comment())) {
+                throw new IllegalArgumentException("终止合同必须填写终止原因和结算说明");
+            }
+            return ContractStatus.TERMINATED;
+        }
         if (request.action() == ContractAction.REQUEST_TERMINATION) {
             if (contract.getStatus() != ContractStatus.ACTIVE && contract.getStatus() != ContractStatus.EXECUTING) {
                 throw new IllegalStateException("仅已生效或执行中的合同允许发起终止申请");
@@ -319,7 +328,7 @@ public class ContractService {
             if (!hasText(request.comment())) {
                 throw new IllegalArgumentException("发起终止申请必须填写终止原因和结算说明");
             }
-            return ContractStatus.TERMINATION_PENDING;
+            return ContractStatus.TERMINATED;
         }
         if (request.action() == ContractAction.APPROVE_TERMINATION) {
             if (contract.getStatus() != ContractStatus.TERMINATION_PENDING) {
@@ -338,9 +347,6 @@ public class ContractService {
                 throw new IllegalArgumentException("驳回终止必须填写审批意见");
             }
             return previousStatusBeforeTermination(contract.getId());
-        }
-        if (request.action() == ContractAction.TERMINATE) {
-            throw new IllegalArgumentException("请先发起终止申请，再由审批人确认终止");
         }
         if (request.action() == ContractAction.REGISTER_PAYMENT) {
             if (contract.getStatus() != ContractStatus.ACTIVE && contract.getStatus() != ContractStatus.EXECUTING) {
@@ -379,10 +385,10 @@ public class ContractService {
             case REGISTER_ACCEPTANCE -> contract.getStatus();
             case COMPLETE -> ContractStatus.COMPLETED;
             case ARCHIVE -> ContractStatus.ARCHIVED;
-            case REQUEST_TERMINATION -> ContractStatus.TERMINATION_PENDING;
+            case REQUEST_TERMINATION -> ContractStatus.TERMINATED;
             case APPROVE_TERMINATION -> ContractStatus.TERMINATED;
             case REJECT_TERMINATION -> previousStatusBeforeTermination(contract.getId());
-            case TERMINATE -> throw new IllegalArgumentException("请先发起终止申请，再由审批人确认终止");
+            case TERMINATE -> ContractStatus.TERMINATED;
         };
     }
 
@@ -417,7 +423,8 @@ public class ContractService {
         if (action == ContractAction.CANCEL_PROCESS
                 || action == ContractAction.WITHDRAW_APPROVAL
                 || action == ContractAction.REJECT
-                || action == ContractAction.REQUEST_TERMINATION) {
+                || action == ContractAction.REQUEST_TERMINATION
+                || action == ContractAction.TERMINATE) {
             return false;
         }
         return status == ContractStatus.DRAFT

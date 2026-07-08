@@ -335,7 +335,7 @@ const saving = ref(false)
 const paymentPlanForm = reactive({ paymentStage: '验收款', plannedRatio: 70, plannedAmount: 0, plannedDate: '', paymentCondition: '验收通过后支付' })
 const acceptanceForm = reactive({ deliveryDate: '', acceptanceDate: '', acceptanceResult: '验收通过', acceptanceNote: '', exceptionNote: '' })
 const attachmentForm = reactive({ fileName: '', fileType: '合同正文', remark: '' })
-const dangerActions = ['REJECT', 'CANCEL_PROCESS', 'REQUEST_TERMINATION', 'APPROVE_TERMINATION', 'REJECT_TERMINATION']
+const dangerActions = ['REJECT', 'CANCEL_PROCESS', 'TERMINATE']
 
 const permittedActions = computed(() => {
   if (!detail.contract) {

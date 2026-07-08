@@ -106,30 +106,29 @@ const saving = ref(false)
 const actionVisible = ref(false)
 const currentAction = ref(null)
 const selectedDetail = reactive({ contract: null, paymentPlans: [], acceptanceRecords: [] })
-const dangerActions = ['REJECT', 'REQUEST_TERMINATION', 'APPROVE_TERMINATION', 'REJECT_TERMINATION']
+const dangerActions = ['REJECT', 'TERMINATE']
 
 const modules = {
   approval: {
     title: '审批中心',
     eyebrow: 'Approval Center',
     tableTitle: '待审批事项',
-    description: '集中处理合同审批和终止审批。',
+    description: '集中处理合同提交后的内部审批。',
     emptyText: '当前没有待审批事项',
-    emptyHint: '合同审批和终止审批任务会集中出现在这里。',
-    params: { statuses: ['PENDING_APPROVAL', 'TERMINATION_PENDING'] },
-    actions: ['APPROVE', 'REJECT', 'APPROVE_TERMINATION', 'REJECT_TERMINATION'],
+    emptyHint: '提交审批后的合同会集中出现在这里。',
+    params: { statuses: ['PENDING_APPROVAL'] },
+    actions: ['APPROVE', 'REJECT'],
     summary: [
-      { label: '合同审批', match: (item) => item.status === 'PENDING_APPROVAL', hint: '等待审批通过或驳回' },
-      { label: '终止审批', match: (item) => item.status === 'TERMINATION_PENDING', hint: '确认是否允许终止' }
+      { label: '合同审批', match: (item) => item.status === 'PENDING_APPROVAL', hint: '等待审批通过或驳回' }
     ]
   },
   finance: {
-    title: '财务管理',
-    eyebrow: 'Finance',
-    tableTitle: '待付款合同',
-    description: '只展示已进入正式流程且未付清的付款任务。',
+    title: '付款管理',
+    eyebrow: 'Payment',
+    tableTitle: '履约付款任务',
+    description: '付款属于履约阶段的财务事项，这里只展示未付清的合同。',
     emptyText: '当前没有待付款合同',
-    emptyHint: '已生效或执行中的未结清合同会进入财务管理。',
+    emptyHint: '已生效或执行中的未结清合同会进入付款管理。',
     params: { statuses: ['ACTIVE', 'EXECUTING'], quickFilter: 'pendingPayment' },
     actions: ['REGISTER_PAYMENT'],
     summary: [
@@ -138,14 +137,14 @@ const modules = {
     ]
   },
   fulfillment: {
-    title: '履约验收',
+    title: '履约管理',
     eyebrow: 'Fulfillment',
     tableTitle: '履约任务',
-    description: '集中处理开始执行和登记验收；合同完成由管理员最终确认。',
-    emptyText: '当前没有履约验收任务',
-    emptyHint: '已生效和执行中的合同会进入履约验收工作台。',
+    description: '集中跟进合同履约中的付款、交付和验收；合同完成由管理员最终确认。',
+    emptyText: '当前没有履约任务',
+    emptyHint: '已生效和执行中的合同会进入履约管理工作台。',
     params: { statuses: ['ACTIVE', 'EXECUTING'] },
-    actions: ['START_EXECUTION', 'REGISTER_ACCEPTANCE', 'COMPLETE'],
+    actions: ['START_EXECUTION', 'REGISTER_PAYMENT', 'REGISTER_ACCEPTANCE', 'COMPLETE', 'TERMINATE'],
     summary: [
       { label: '待启动', match: (item) => item.status === 'ACTIVE', hint: '可开始执行' },
       { label: '执行中', match: (item) => item.status === 'EXECUTING', hint: '跟进交付验收' }
@@ -202,8 +201,7 @@ function shortActionLabel(value, fallback) {
     REGISTER_ACCEPTANCE: '验收',
     START_EXECUTION: '开始执行',
     COMPLETE: '完成',
-    APPROVE_TERMINATION: '确认终止',
-    REJECT_TERMINATION: '驳回终止'
+    TERMINATE: '终止'
   }[value] || fallback
 }
 

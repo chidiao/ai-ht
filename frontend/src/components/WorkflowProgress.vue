@@ -47,10 +47,8 @@ const steps = [
   { status: 'SUPPLIER_CONFIRMING', label: '供应商确认', description: '确认条款与商务信息' },
   { status: 'PENDING_APPROVAL', label: '内部审批', description: '负责人审批生效' },
   { status: 'ACTIVE', label: '合同生效', description: '进入正式履约' },
-  { status: 'EXECUTING', label: '履约执行', description: '跟进交付与验收' },
-  { status: 'TERMINATION_PENDING', label: '终止审批', description: '确认终止原因和结算方案' },
-  { status: 'PAYING', label: '付款跟进', description: '登记付款进度' },
-  { status: 'COMPLETED', label: '合同完成', description: '履约付款闭环' },
+  { status: 'EXECUTING', label: '履约执行', description: '跟进付款、交付与验收' },
+  { status: 'COMPLETED', label: '合同完成', description: '付款验收闭环' },
   { status: 'ARCHIVED', label: '归档', description: '完成档案沉淀' }
 ]
 
@@ -70,7 +68,10 @@ const activeIndex = computed(() => {
     return 0
   }
   if (props.status === 'TERMINATED') {
-    return Math.max(0, steps.findIndex((item) => item.status === 'TERMINATION_PENDING'))
+    return Math.max(0, steps.findIndex((item) => item.status === 'EXECUTING'))
+  }
+  if (props.status === 'TERMINATION_PENDING') {
+    return Math.max(0, steps.findIndex((item) => item.status === 'EXECUTING'))
   }
   return Math.max(0, steps.findIndex((item) => item.status === props.status))
 })
@@ -117,7 +118,7 @@ const decoratedSteps = computed(() =>
 .workflow-track {
   position: relative;
   display: grid;
-    grid-template-columns: repeat(9, minmax(96px, 1fr));
+  grid-template-columns: repeat(7, minmax(96px, 1fr));
   gap: 0;
   padding: 8px 8px 4px;
 }

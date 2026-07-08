@@ -137,21 +137,21 @@ const stats = ref({ total: 0, pendingApproval: 0, executing: 0, pendingPayment: 
 
 const roleProfiles = {
   PURCHASER: {
-    description: '你主要负责合同拟稿、供应商确认、提交审批、取消流程和发起终止申请。',
+    description: '你主要负责合同拟稿、供应商确认、提交审批和生效前取消流程。',
     focuses: [
       { label: '我的合同入口', value: '合同管理', hint: '新建、查询和维护合同', to: '/contracts' },
       { label: '待审批', value: () => stats.value.pendingApproval, hint: '关注已提交审批的合同', to: '/approval' }
     ]
   },
   APPROVER: {
-    description: '你主要负责合同审批、审批驳回，以及生效后终止申请的确认。',
+    description: '你主要负责合同审批和审批驳回。',
     focuses: [
       { label: '合同审批', value: () => countByStatus('PENDING_APPROVAL'), hint: '等待审批意见', to: '/approval' },
-      { label: '终止审批', value: () => countByStatus('TERMINATION_PENDING'), hint: '确认终止和结算意见', to: '/approval' }
+      { label: '已通过', value: () => countByStatus('ACTIVE') + countByStatus('EXECUTING'), hint: '已进入履约阶段', to: '/contracts' }
     ]
   },
   FINANCE: {
-    description: '你主要负责查看付款计划、登记付款、维护发票和付款进度。',
+    description: '你主要负责履约阶段的付款计划、登记付款、发票和付款进度。',
     focuses: [
       { label: '待付款', value: () => stats.value.pendingPayment, hint: '未结清合同', to: '/finance' },
       { label: '部分付款', value: () => contracts.value.filter((item) => item.paymentStatus === 'PARTIAL').length, hint: '仍有后续款项', to: '/finance' }
@@ -172,10 +172,10 @@ const roleProfiles = {
     ]
   },
   ADMIN: {
-    description: '你可以查看全部业务入口，用于演示、排查和跨角色处理。',
+    description: '你可以查看全部业务入口，负责跨角色处理、合同完成确认和必要时终止合同。',
     focuses: [
-      { label: '审批事项', value: () => countByStatus('PENDING_APPROVAL') + countByStatus('TERMINATION_PENDING'), hint: '合同审批和终止审批', to: '/approval' },
-      { label: '付款事项', value: () => stats.value.pendingPayment, hint: '财务待处理', to: '/finance' }
+      { label: '审批事项', value: () => countByStatus('PENDING_APPROVAL'), hint: '合同审批', to: '/approval' },
+      { label: '履约事项', value: () => stats.value.executing + stats.value.pendingPayment, hint: '付款、验收和完成确认', to: '/fulfillment' }
     ]
   }
 }
@@ -189,7 +189,7 @@ const roleFocusItems = computed(() => roleProfile.value.focuses.map((item) => ({
 
 const kpiItems = computed(() => [
   { key: 'total', label: '合同总数', value: stats.value.total, hint: '全部合同' },
-  { key: 'executing', label: '履约中', value: stats.value.executing, hint: '交付与验收' },
+  { key: 'executing', label: '履约中', value: stats.value.executing, hint: '付款、交付与验收' },
   { key: 'pendingPayment', label: '待付款', value: stats.value.pendingPayment, hint: '未结清' },
   { key: 'expiringSoon', label: '临期', value: stats.value.expiringSoon, hint: '30 天内到期' }
 ])

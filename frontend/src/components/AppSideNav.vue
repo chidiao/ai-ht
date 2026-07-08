@@ -15,11 +15,11 @@
       </el-menu-item>
       <el-menu-item v-if="canAccess(['FINANCE', 'ADMIN'])" index="/finance">
         <el-icon><Money /></el-icon>
-        <span>财务管理</span>
+        <span>付款管理</span>
       </el-menu-item>
       <el-menu-item v-if="canAccess(['ACCEPTOR', 'ADMIN'])" index="/fulfillment">
         <el-icon><Checked /></el-icon>
-        <span>履约验收</span>
+        <span>履约管理</span>
       </el-menu-item>
       <el-menu-item v-if="canAccess(['ARCHIVIST', 'ADMIN'])" index="/archive">
         <el-icon><FolderChecked /></el-icon>

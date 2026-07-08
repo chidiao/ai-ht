@@ -97,8 +97,7 @@ public class DemoDataInitializer implements CommandLineRunner {
                 "供应链部", "仓储服务", "52000.00", "0.00", LocalDate.now().minusDays(28), null,
                 LocalDate.now().plusDays(42), ContractStatus.TERMINATED, PaymentStatus.UNPAID, "因项目取消，合同提前终止。");
         logRepository.save(new ContractFlowLog(terminated.getId(), ContractAction.APPROVE, "赵总", ContractStatus.PENDING_APPROVAL, ContractStatus.ACTIVE, "合同审批通过。"));
-        logRepository.save(new ContractFlowLog(terminated.getId(), ContractAction.REQUEST_TERMINATION, "李倩", ContractStatus.ACTIVE, ContractStatus.TERMINATION_PENDING, "供应商仓储资源无法按期提供，申请终止并确认无付款结算。"));
-        logRepository.save(new ContractFlowLog(terminated.getId(), ContractAction.APPROVE_TERMINATION, "赵总", ContractStatus.TERMINATION_PENDING, ContractStatus.TERMINATED, "同意终止，双方无未结算款项。"));
+        logRepository.save(new ContractFlowLog(terminated.getId(), ContractAction.TERMINATE, "管理员", ContractStatus.ACTIVE, ContractStatus.TERMINATED, "供应商仓储资源无法按期提供，确认终止且双方无未结算款项。"));
 
         Contract overdue = saveContract("PO-2026-010", "车间检测仪器采购合同", "无锡精测仪器有限公司", "陈浩",
                 "研发部", "检测仪器", "218000.00", "109000.00", LocalDate.now().minusDays(150), LocalDate.now().minusDays(140),

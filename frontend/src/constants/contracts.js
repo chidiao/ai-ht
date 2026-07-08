@@ -6,7 +6,7 @@ export const statusOptions = [
   { value: 'CANCELLED', label: '已取消' },
   { value: 'ACTIVE', label: '已生效' },
   { value: 'EXECUTING', label: '执行中' },
-  { value: 'TERMINATION_PENDING', label: '终止审批中' },
+  { value: 'TERMINATION_PENDING', label: '终止处理中' },
   { value: 'COMPLETED', label: '已完成' },
   { value: 'ARCHIVED', label: '已归档' },
   { value: 'TERMINATED', label: '已终止' }
@@ -55,17 +55,13 @@ export const actionOptions = {
   ACTIVE: [
     { value: 'START_EXECUTION', label: '开始执行' },
     { value: 'REGISTER_PAYMENT', label: '登记付款' },
-    { value: 'REQUEST_TERMINATION', label: '发起终止申请' }
+    { value: 'TERMINATE', label: '终止合同' }
   ],
   EXECUTING: [
     { value: 'REGISTER_PAYMENT', label: '登记付款' },
     { value: 'REGISTER_ACCEPTANCE', label: '登记验收' },
     { value: 'COMPLETE', label: '完成合同' },
-    { value: 'REQUEST_TERMINATION', label: '发起终止申请' }
-  ],
-  TERMINATION_PENDING: [
-    { value: 'APPROVE_TERMINATION', label: '确认终止' },
-    { value: 'REJECT_TERMINATION', label: '驳回终止' }
+    { value: 'TERMINATE', label: '终止合同' }
   ],
   COMPLETED: [{ value: 'ARCHIVE', label: '归档' }]
 }

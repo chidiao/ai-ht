@@ -152,21 +152,15 @@
         </el-form-item>
       </template>
 
-      <template v-else-if="action?.value === 'REQUEST_TERMINATION'">
+      <template v-else-if="action?.value === 'TERMINATE'">
         <el-alert class="action-alert" type="warning" :closable="false" show-icon>
-          <template #title>终止申请会进入审批，需说明终止原因、责任和已付款结算情况。</template>
+          <template #title>终止用于已生效或履约中的合同关闭，需说明终止原因、责任和付款结算情况。</template>
         </el-alert>
-        <el-form-item label="申请日期">
+        <el-form-item label="终止日期">
           <el-date-picker v-model="actionForm.terminateDate" type="date" value-format="YYYY-MM-DD" />
         </el-form-item>
-        <el-form-item label="申请说明">
+        <el-form-item label="终止说明">
           <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="必填，例如：供应商无法按期交付，双方确认终止并按已完成部分结算" />
-        </el-form-item>
-      </template>
-
-      <template v-else-if="action?.value === 'APPROVE_TERMINATION' || action?.value === 'REJECT_TERMINATION'">
-        <el-form-item label="审批意见">
-          <el-input v-model="actionForm.comment" type="textarea" :rows="3" placeholder="说明是否同意终止，以及付款、交付、责任处理意见" />
         </el-form-item>
       </template>
     </el-form>
@@ -208,7 +202,7 @@ const props = defineProps({
 const emit = defineEmits(['submit'])
 const visible = defineModel({ required: true })
 const actionForm = reactive(emptyActionForm())
-const requiredCommentActions = ['CANCEL_PROCESS', 'WITHDRAW_APPROVAL', 'REQUEST_TERMINATION', 'APPROVE_TERMINATION', 'REJECT_TERMINATION']
+const requiredCommentActions = ['CANCEL_PROCESS', 'WITHDRAW_APPROVAL', 'TERMINATE']
 const remainingAmount = computed(() => Math.max(Number(props.contract?.amount || 0) - Number(props.contract?.paidAmount || 0), 0))
 const unpaidPaymentPlans = computed(() => props.paymentPlans.filter((item) => paymentPlanRemaining(item) > 0))
 const selectedPaymentPlan = computed(() => props.paymentPlans.find((item) => item.id === actionForm.paymentPlanId))
@@ -304,12 +298,11 @@ function buildComment() {
   } else if (action === 'ARCHIVE') {
     lines.push(`归档编号：${actionForm.archiveNo || '-'}`)
     lines.push(`归档位置：${actionForm.archiveLocation || '-'}`)
-  } else if (action === 'REQUEST_TERMINATION') {
-    lines.push(`申请日期：${actionForm.terminateDate || '-'}`)
-  } else if (action === 'APPROVE_TERMINATION' || action === 'REJECT_TERMINATION') {
-    lines.push(`审批意见：${actionForm.comment || '-'}`)
+  } else if (action === 'TERMINATE') {
+    lines.push(`终止日期：${actionForm.terminateDate || '-'}`)
+    lines.push(`终止说明：${actionForm.comment || '-'}`)
   }
-  if (actionForm.comment && !['CANCEL_PROCESS', 'WITHDRAW_APPROVAL', 'APPROVE_TERMINATION', 'REJECT_TERMINATION'].includes(action)) {
+  if (actionForm.comment && !['CANCEL_PROCESS', 'WITHDRAW_APPROVAL', 'TERMINATE'].includes(action)) {
     lines.push(`说明：${actionForm.comment}`)
   }
   return lines.join('；')

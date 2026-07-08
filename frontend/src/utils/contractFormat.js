@@ -23,7 +23,9 @@ export function archiveLabel(value) {
 export function actionLabel(value) {
   const allActions = Object.values(actionOptions).flat().concat(
     { value: 'REGISTER_ACCEPTANCE', label: '登记验收' },
-    { value: 'TERMINATE', label: '终止合同' }
+    { value: 'REQUEST_TERMINATION', label: '终止合同' },
+    { value: 'APPROVE_TERMINATION', label: '终止确认' },
+    { value: 'REJECT_TERMINATION', label: '终止驳回' }
   )
   return allActions.find((item) => item.value === value)?.label || value
 }

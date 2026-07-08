@@ -14,9 +14,7 @@ export function canRunAction(role, action) {
     REGISTER_ACCEPTANCE: ['ACCEPTOR', 'ADMIN'],
     COMPLETE: ['ADMIN'],
     ARCHIVE: ['ARCHIVIST', 'ADMIN'],
-    REQUEST_TERMINATION: ['PURCHASER', 'ADMIN'],
-    APPROVE_TERMINATION: ['APPROVER', 'ADMIN'],
-    REJECT_TERMINATION: ['APPROVER', 'ADMIN']
+    TERMINATE: ['ADMIN']
   }
   return (actionRoles[action] || []).includes(normalizeRole(role))
 }
