@@ -1,0 +1,70 @@
+package com.example.backend.contract;
+
+import com.example.backend.contract.dto.ContractActionRequest;
+import com.example.backend.contract.dto.ContractDetailResponse;
+import com.example.backend.contract.dto.ContractRequest;
+import com.example.backend.contract.dto.ContractStatsResponse;
+import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/contracts")
+public class ContractController {
+    private final ContractService contractService;
+
+    public ContractController(ContractService contractService) {
+        this.contractService = contractService;
+    }
+
+    @GetMapping
+    public List<Contract> search(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String supplierName,
+            @RequestParam(required = false) String owner,
+            @RequestParam(required = false) ContractStatus status,
+            @RequestParam(required = false) List<ContractStatus> statuses,
+            @RequestParam(required = false) PaymentStatus paymentStatus,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueStart,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueEnd,
+            @RequestParam(required = false) Boolean expiringSoon,
+            @RequestParam(required = false) String quickFilter
+    ) {
+        return contractService.search(keyword, supplierName, owner, status, statuses, paymentStatus, dueStart, dueEnd, expiringSoon, quickFilter);
+    }
+
+    @GetMapping("/{id}")
+    public ContractDetailResponse detail(@PathVariable Long id) {
+        return contractService.detail(id);
+    }
+
+    @PostMapping
+    public Contract create(@Valid @RequestBody ContractRequest request) {
+        return contractService.create(request);
+    }
+
+    @PutMapping("/{id}")
+    public Contract update(@PathVariable Long id, @Valid @RequestBody ContractRequest request) {
+        return contractService.update(id, request);
+    }
+
+    @PostMapping("/{id}/action")
+    public Contract action(@PathVariable Long id, @Valid @RequestBody ContractActionRequest request) {
+        return contractService.action(id, request);
+    }
+
+    @GetMapping("/stats")
+    public ContractStatsResponse stats() {
+        return contractService.stats();
+    }
+}
