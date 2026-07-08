@@ -28,6 +28,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { roleOptions, useSession } from '../stores/session'
+import { canAccessRoute } from '../utils/routeAccess'
 
 const router = useRouter()
 const { currentRoleLabel, currentUserName, logout, switchRole } = useSession()
@@ -35,10 +36,12 @@ const { currentRoleLabel, currentUserName, logout, switchRole } = useSession()
 function handleCommand(command) {
   if (command === 'LOGOUT') {
     logout()
-    router.push('/login')
+    router.replace('/login')
     return
   }
   switchRole(command)
-  router.go(0)
+  if (!canAccessRoute(router.currentRoute.value, command)) {
+    router.replace('/dashboard')
+  }
 }
 </script>

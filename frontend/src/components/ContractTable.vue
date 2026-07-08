@@ -36,11 +36,19 @@
           </div>
         </template>
       </el-table-column>
+      <template #empty>
+        <div class="table-empty-state">
+          <el-icon><Document /></el-icon>
+          <strong>暂无合同数据</strong>
+          <span>可以调整查询条件，或在合同管理中创建新的采购合同。</span>
+        </div>
+      </template>
     </el-table>
   </section>
 </template>
 
 <script setup>
+import { Document } from '@element-plus/icons-vue'
 import {
   canEdit,
   isExpiring,

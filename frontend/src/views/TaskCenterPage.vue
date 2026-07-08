@@ -63,8 +63,14 @@
             </div>
           </template>
         </el-table-column>
+        <template #empty>
+          <div class="table-empty-state">
+            <el-icon><FolderOpened /></el-icon>
+            <strong>{{ moduleConfig.emptyText }}</strong>
+            <span>{{ moduleConfig.emptyHint }}</span>
+          </div>
+        </template>
       </el-table>
-      <el-empty v-if="!loading && !contracts.length" :description="moduleConfig.emptyText" :image-size="88" />
     </section>
 
     <ContractActionDialog
@@ -83,6 +89,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { FolderOpened } from '@element-plus/icons-vue'
 import AppLayout from '../components/AppLayout.vue'
 import ContractActionDialog from '../components/ContractActionDialog.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -108,6 +115,7 @@ const modules = {
     tableTitle: '待审批事项',
     description: '集中处理合同审批和终止审批。',
     emptyText: '当前没有待审批事项',
+    emptyHint: '合同审批和终止审批任务会集中出现在这里。',
     params: { statuses: ['PENDING_APPROVAL', 'TERMINATION_PENDING'] },
     actions: ['APPROVE', 'REJECT', 'APPROVE_TERMINATION', 'REJECT_TERMINATION'],
     summary: [
@@ -121,6 +129,7 @@ const modules = {
     tableTitle: '待付款合同',
     description: '只展示已进入正式流程且未付清的付款任务。',
     emptyText: '当前没有待付款合同',
+    emptyHint: '已生效或执行中的未结清合同会进入财务管理。',
     params: { statuses: ['ACTIVE', 'EXECUTING'], quickFilter: 'pendingPayment' },
     actions: ['REGISTER_PAYMENT'],
     summary: [
@@ -134,6 +143,7 @@ const modules = {
     tableTitle: '履约任务',
     description: '集中处理开始执行、登记验收和完成合同。',
     emptyText: '当前没有履约验收任务',
+    emptyHint: '已生效和执行中的合同会进入履约验收工作台。',
     params: { statuses: ['ACTIVE', 'EXECUTING'] },
     actions: ['START_EXECUTION', 'REGISTER_ACCEPTANCE', 'COMPLETE'],
     summary: [
@@ -147,6 +157,7 @@ const modules = {
     tableTitle: '待归档合同',
     description: '核验合同正文、验收和付款完成情况后归档。',
     emptyText: '当前没有待归档合同',
+    emptyHint: '合同完成后会进入档案管理，等待资料核验和归档。',
     params: { statuses: ['COMPLETED'] },
     actions: ['ARCHIVE'],
     summary: [
