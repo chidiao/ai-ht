@@ -17,6 +17,6 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationException(MethodArgumentNotValidException exception) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Invalid or incomplete request parameters"));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "请求参数不完整或格式不正确"));
     }
 }

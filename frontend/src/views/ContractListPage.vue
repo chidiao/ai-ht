@@ -55,7 +55,7 @@ const activeStatKey = computed(() => {
   if (statuses.length === 1 && statuses[0] === 'PENDING_APPROVAL') {
     return 'pendingApproval'
   }
-  if (statuses.length === 2 && statuses.includes('EXECUTING') && statuses.includes('PAYING')) {
+  if (statuses.length === 1 && statuses[0] === 'EXECUTING') {
     return 'executing'
   }
   if (filters.value.quickFilter === 'pendingPayment') {
@@ -122,7 +122,7 @@ function applyQuickFilter(key) {
   } else if (key === 'expiringSoon') {
     filters.value.expiringSoon = true
   } else if (key === 'executing') {
-    filters.value.statuses = ['EXECUTING', 'PAYING']
+    filters.value.statuses = ['EXECUTING']
   }
 
   loadData()
@@ -133,7 +133,7 @@ function applyClientQuickFilter(list) {
     case 'pendingApproval':
       return list.filter((item) => item.status === 'PENDING_APPROVAL')
     case 'executing':
-      return list.filter((item) => ['EXECUTING', 'PAYING'].includes(item.status))
+      return list.filter((item) => item.status === 'EXECUTING')
     case 'pendingPayment':
       return list.filter((item) => item.paymentStatus !== 'PAID' && item.status !== 'ARCHIVED')
     case 'expiringSoon':

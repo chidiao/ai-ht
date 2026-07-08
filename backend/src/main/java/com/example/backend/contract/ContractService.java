@@ -32,7 +32,7 @@ public class ContractService {
         requiredStatus.put(ContractAction.APPROVE, ContractStatus.PENDING_APPROVAL);
         requiredStatus.put(ContractAction.REJECT, ContractStatus.PENDING_APPROVAL);
         requiredStatus.put(ContractAction.START_EXECUTION, ContractStatus.ACTIVE);
-        requiredStatus.put(ContractAction.COMPLETE, ContractStatus.PAYING);
+        requiredStatus.put(ContractAction.COMPLETE, ContractStatus.EXECUTING);
         requiredStatus.put(ContractAction.ARCHIVE, ContractStatus.COMPLETED);
     }
 
@@ -79,7 +79,7 @@ public class ContractService {
                 String filterKey = quickFilter.trim();
                 switch (filterKey) {
                     case "pendingApproval" -> predicates.add(builder.equal(root.get("status"), ContractStatus.PENDING_APPROVAL));
-                    case "executing" -> predicates.add(root.get("status").in(ContractStatus.EXECUTING, ContractStatus.PAYING));
+                    case "executing" -> predicates.add(builder.equal(root.get("status"), ContractStatus.EXECUTING));
                     case "pendingPayment" -> predicates.add(builder.and(
                             builder.notEqual(root.get("paymentStatus"), PaymentStatus.PAID),
                             builder.notEqual(root.get("status"), ContractStatus.ARCHIVED)
@@ -103,12 +103,15 @@ public class ContractService {
     @Transactional
     public Contract create(ContractRequest request) {
         contractRepository.findByContractNo(request.contractNo()).ifPresent(existing -> {
-            throw new IllegalArgumentException("Contract number already exists");
+            throw new IllegalArgumentException("合同编号已存在");
         });
         Contract contract = new Contract();
         applyRequest(contract, request);
         contract.setStatus(ContractStatus.DRAFT);
         contract.setPaymentStatus(PaymentStatus.UNPAID);
+        contract.setApprovalStatus(ApprovalStatus.NOT_SUBMITTED);
+        contract.setSigningStatus(SigningStatus.UNSIGNED);
+        contract.setArchiveStatus(ArchiveStatus.UNARCHIVED);
         contract.setPaidAmount(BigDecimal.ZERO);
         Contract saved = contractRepository.save(contract);
         logRepository.save(new ContractFlowLog(saved.getId(), ContractAction.SUBMIT_SUPPLIER_CONFIRM, "System", null, ContractStatus.DRAFT, "Contract draft created"));
@@ -119,12 +122,12 @@ public class ContractService {
     public Contract update(Long id, ContractRequest request) {
         Contract contract = findContract(id);
         if (contract.getStatus() != ContractStatus.DRAFT && contract.getStatus() != ContractStatus.REJECTED) {
-            throw new IllegalStateException("Only draft or rejected contracts can be edited");
+            throw new IllegalStateException("仅草稿或驳回状态允许编辑");
         }
         contractRepository.findByContractNo(request.contractNo())
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-                    throw new IllegalArgumentException("Contract number already exists");
+                    throw new IllegalArgumentException("合同编号已存在");
                 });
         applyRequest(contract, request);
         return contractRepository.save(contract);
@@ -142,6 +145,7 @@ public class ContractService {
         if (request.action() == ContractAction.REGISTER_PAYMENT) {
             updatePayment(contract, request.paidAmount());
         }
+        applySubStatus(contract, request.action());
         Contract saved = contractRepository.save(contract);
         logRepository.save(new ContractFlowLog(saved.getId(), request.action(), request.operator(), before, after, request.comment()));
         return saved;
@@ -154,34 +158,35 @@ public class ContractService {
         return new ContractStatsResponse(
                 contracts.size(),
                 contracts.stream().filter(item -> item.getStatus() == ContractStatus.PENDING_APPROVAL).count(),
-                contracts.stream().filter(item -> item.getStatus() == ContractStatus.EXECUTING || item.getStatus() == ContractStatus.PAYING).count(),
+                contracts.stream().filter(item -> item.getStatus() == ContractStatus.EXECUTING).count(),
                 contracts.stream().filter(item -> item.getPaymentStatus() != PaymentStatus.PAID && item.getStatus() != ContractStatus.ARCHIVED).count(),
                 contracts.stream().filter(item -> !item.getExpiryDate().isBefore(today) && !item.getExpiryDate().isAfter(today.plusDays(30))).count()
         );
     }
 
     private ContractStatus nextStatus(Contract contract, ContractActionRequest request) {
+        validateActionAllowed(contract, request.action());
         if (request.action() == ContractAction.TERMINATE) {
             if (contract.getStatus() == ContractStatus.ARCHIVED || contract.getStatus() == ContractStatus.COMPLETED) {
-                throw new IllegalStateException("Completed or archived contracts cannot be terminated");
+                throw new IllegalStateException("已完成或已归档的合同不能终止");
             }
             return ContractStatus.TERMINATED;
         }
         if (request.action() == ContractAction.REGISTER_PAYMENT) {
-            if (contract.getStatus() != ContractStatus.EXECUTING && contract.getStatus() != ContractStatus.PAYING) {
-                throw new IllegalStateException("Current status does not allow this action");
+            if (contract.getStatus() != ContractStatus.ACTIVE && contract.getStatus() != ContractStatus.EXECUTING) {
+                throw new IllegalStateException("当前状态不允许登记付款");
             }
-            return ContractStatus.PAYING;
+            return contract.getStatus();
         }
         ContractStatus required = requiredStatus.get(request.action());
         if (required == null) {
-            throw new IllegalArgumentException("Unsupported workflow action");
+            throw new IllegalArgumentException("不支持的流程动作");
         }
         if (contract.getStatus() != required) {
-            throw new IllegalStateException("Current status does not allow this action");
+            throw new IllegalStateException("当前状态不允许执行该动作");
         }
         if (request.action() == ContractAction.COMPLETE && contract.getPaymentStatus() != PaymentStatus.PAID) {
-            throw new IllegalStateException("Contract can be completed only after full payment");
+            throw new IllegalStateException("合同未全额付款，不能完成合同");
         }
         return switch (request.action()) {
             case SUBMIT_SUPPLIER_CONFIRM -> ContractStatus.SUPPLIER_CONFIRMING;
@@ -190,19 +195,48 @@ public class ContractService {
             case APPROVE -> ContractStatus.ACTIVE;
             case REJECT -> ContractStatus.REJECTED;
             case START_EXECUTION -> ContractStatus.EXECUTING;
-            case REGISTER_PAYMENT -> ContractStatus.PAYING;
+            case REGISTER_PAYMENT -> contract.getStatus();
             case COMPLETE -> ContractStatus.COMPLETED;
             case ARCHIVE -> ContractStatus.ARCHIVED;
             case TERMINATE -> ContractStatus.TERMINATED;
         };
     }
 
+    private void validateActionAllowed(Contract contract, ContractAction action) {
+        if (contract.getStatus() == ContractStatus.ARCHIVED) {
+            throw new IllegalStateException("合同已归档，不能继续流程操作");
+        }
+        if (contract.getStatus() == ContractStatus.TERMINATED) {
+            throw new IllegalStateException("合同已终止，不能继续流程操作");
+        }
+        if (contract.getStatus() == ContractStatus.COMPLETED && action != ContractAction.ARCHIVE) {
+            throw new IllegalStateException("合同已完成，仅允许归档");
+        }
+        if (isExpired(contract) && isBeforeEffectiveCloseout(contract.getStatus(), action)) {
+            throw new IllegalStateException("合同已过期，未生效流程不能继续推进，请修改到期日期或终止合同");
+        }
+    }
+
+    private boolean isExpired(Contract contract) {
+        return contract.getExpiryDate() != null && contract.getExpiryDate().isBefore(LocalDate.now());
+    }
+
+    private boolean isBeforeEffectiveCloseout(ContractStatus status, ContractAction action) {
+        if (action == ContractAction.TERMINATE) {
+            return false;
+        }
+        return status == ContractStatus.DRAFT
+                || status == ContractStatus.SUPPLIER_CONFIRMING
+                || status == ContractStatus.PENDING_APPROVAL
+                || status == ContractStatus.REJECTED;
+    }
+
     private void updatePayment(Contract contract, BigDecimal paidAmount) {
         if (paidAmount == null || paidAmount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Paid amount is required and cannot be less than 0");
+            throw new IllegalArgumentException("付款金额不能为空且不能小于 0");
         }
         if (paidAmount.compareTo(contract.getAmount()) > 0) {
-            throw new IllegalArgumentException("Paid amount cannot be greater than contract amount");
+            throw new IllegalArgumentException("已付金额不能大于合同金额");
         }
         contract.setPaidAmount(paidAmount);
         if (paidAmount.compareTo(BigDecimal.ZERO) == 0) {
@@ -214,8 +248,28 @@ public class ContractService {
         }
     }
 
+    private void applySubStatus(Contract contract, ContractAction action) {
+        switch (action) {
+            case SUBMIT_SUPPLIER_CONFIRM -> contract.setSigningStatus(SigningStatus.OUR_SIGNED);
+            case SUBMIT_APPROVAL -> {
+                contract.setSigningStatus(SigningStatus.BOTH_SIGNED);
+                contract.setApprovalStatus(ApprovalStatus.PENDING);
+            }
+            case APPROVE -> approvalPassed(contract);
+            case REJECT -> contract.setApprovalStatus(ApprovalStatus.REJECTED);
+            case ARCHIVE -> contract.setArchiveStatus(ArchiveStatus.ARCHIVED);
+            default -> {
+            }
+        }
+    }
+
+    private void approvalPassed(Contract contract) {
+        contract.setApprovalStatus(ApprovalStatus.APPROVED);
+        contract.setSigningStatus(SigningStatus.BOTH_SIGNED);
+    }
+
     private Contract findContract(Long id) {
-        return contractRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Contract does not exist"));
+        return contractRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("合同不存在"));
     }
 
     private void applyRequest(Contract contract, ContractRequest request) {

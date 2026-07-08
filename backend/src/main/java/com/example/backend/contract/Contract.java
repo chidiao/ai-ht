@@ -69,6 +69,18 @@ public class Contract {
     @Column(nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ApprovalStatus approvalStatus = ApprovalStatus.NOT_SUBMITTED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SigningStatus signingStatus = SigningStatus.UNSIGNED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ArchiveStatus archiveStatus = ArchiveStatus.UNARCHIVED;
+
     @Column(length = 1000)
     private String remark;
 
@@ -85,6 +97,15 @@ public class Contract {
         }
         if (this.paymentStatus == null) {
             this.paymentStatus = PaymentStatus.UNPAID;
+        }
+        if (this.approvalStatus == null) {
+            this.approvalStatus = ApprovalStatus.NOT_SUBMITTED;
+        }
+        if (this.signingStatus == null) {
+            this.signingStatus = SigningStatus.UNSIGNED;
+        }
+        if (this.archiveStatus == null) {
+            this.archiveStatus = ArchiveStatus.UNARCHIVED;
         }
         if (this.paidAmount == null) {
             this.paidAmount = BigDecimal.ZERO;
@@ -124,6 +145,12 @@ public class Contract {
     public void setStatus(ContractStatus status) { this.status = status; }
     public PaymentStatus getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(PaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
+    public ApprovalStatus getApprovalStatus() { return approvalStatus; }
+    public void setApprovalStatus(ApprovalStatus approvalStatus) { this.approvalStatus = approvalStatus; }
+    public SigningStatus getSigningStatus() { return signingStatus; }
+    public void setSigningStatus(SigningStatus signingStatus) { this.signingStatus = signingStatus; }
+    public ArchiveStatus getArchiveStatus() { return archiveStatus; }
+    public void setArchiveStatus(ArchiveStatus archiveStatus) { this.archiveStatus = archiveStatus; }
     public String getRemark() { return remark; }
     public void setRemark(String remark) { this.remark = remark; }
     public LocalDateTime getCreatedAt() { return createdAt; }

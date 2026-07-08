@@ -42,6 +42,28 @@
             <h2>合同信息</h2>
             <el-tag :type="statusType(detail.contract.status)">{{ statusLabel(detail.contract.status) }}</el-tag>
           </div>
+          <div class="status-strip">
+            <div>
+              <span>主流程</span>
+              <strong>{{ statusLabel(detail.contract.status) }}</strong>
+            </div>
+            <div>
+              <span>签署</span>
+              <strong>{{ signingLabel(detail.contract.signingStatus) }}</strong>
+            </div>
+            <div>
+              <span>审批</span>
+              <strong>{{ approvalLabel(detail.contract.approvalStatus) }}</strong>
+            </div>
+            <div>
+              <span>付款</span>
+              <strong>{{ paymentLabel(detail.contract.paymentStatus) }}</strong>
+            </div>
+            <div>
+              <span>归档</span>
+              <strong>{{ archiveLabel(detail.contract.archiveStatus) }}</strong>
+            </div>
+          </div>
           <el-descriptions :column="3" border>
             <el-descriptions-item label="合同编号">{{ detail.contract.contractNo }}</el-descriptions-item>
             <el-descriptions-item label="供应商">{{ detail.contract.supplierName }}</el-descriptions-item>
@@ -110,10 +132,13 @@ import { useSession } from '../stores/session'
 import { canEditContract, canRunAction } from '../utils/permissions'
 import {
   actionLabel,
+  approvalLabel,
+  archiveLabel,
   availableActions,
   formatDateTime,
   money,
   paymentLabel,
+  signingLabel,
   statusLabel,
   statusType
 } from '../utils/contractFormat'
@@ -187,6 +212,36 @@ loadDetail()
   position: relative;
   display: grid;
   gap: 14px;
+}
+
+.status-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.status-strip div {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.status-strip span,
+.status-strip strong {
+  display: block;
+}
+
+.status-strip span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.status-strip strong {
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 14px;
 }
 
 .flow-log-list::before {
@@ -283,6 +338,10 @@ loadDetail()
 }
 
 @media (max-width: 760px) {
+  .status-strip {
+    grid-template-columns: 1fr;
+  }
+
   .flow-log-head {
     display: grid;
   }

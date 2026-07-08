@@ -1,4 +1,4 @@
-import { actionOptions, paymentOptions, statusOptions } from '../constants/contracts'
+import { actionOptions, approvalOptions, archiveOptions, paymentOptions, signingOptions, statusOptions } from '../constants/contracts'
 
 export function statusLabel(value) {
   return statusOptions.find((item) => item.value === value)?.label || ''
@@ -6,6 +6,18 @@ export function statusLabel(value) {
 
 export function paymentLabel(value) {
   return paymentOptions.find((item) => item.value === value)?.label || ''
+}
+
+export function approvalLabel(value) {
+  return approvalOptions.find((item) => item.value === value)?.label || ''
+}
+
+export function signingLabel(value) {
+  return signingOptions.find((item) => item.value === value)?.label || ''
+}
+
+export function archiveLabel(value) {
+  return archiveOptions.find((item) => item.value === value)?.label || ''
 }
 
 export function actionLabel(value) {
@@ -21,7 +33,6 @@ export function statusType(value) {
     REJECTED: 'danger',
     ACTIVE: 'success',
     EXECUTING: 'primary',
-    PAYING: 'primary',
     COMPLETED: 'success',
     ARCHIVED: 'info',
     TERMINATED: 'danger'
@@ -48,11 +59,29 @@ export function formatDateTime(value) {
 }
 
 export function availableActions(row) {
-  const actions = [...(actionOptions[row.status] || [])]
+  let actions = [...(actionOptions[row.status] || [])]
+  if (isExpiredBeforeEffective(row)) {
+    actions = []
+  }
+  if (row.status === 'EXECUTING' && row.paymentStatus !== 'PAID') {
+    actions = actions.filter((action) => action.value !== 'COMPLETE')
+  }
+  if (row.status === 'EXECUTING' && row.paymentStatus === 'PAID') {
+    actions = actions.filter((action) => action.value !== 'REGISTER_PAYMENT')
+  }
   if (!['COMPLETED', 'ARCHIVED', 'TERMINATED'].includes(row.status)) {
     actions.push({ value: 'TERMINATE', label: '终止合同' })
   }
   return actions
+}
+
+function isExpiredBeforeEffective(row) {
+  if (!row?.expiryDate || !['DRAFT', 'SUPPLIER_CONFIRMING', 'PENDING_APPROVAL', 'REJECTED'].includes(row.status)) {
+    return false
+  }
+  const today = new Date()
+  const expiry = new Date(`${row.expiryDate}T00:00:00`)
+  return expiry.getTime() < new Date(today.toISOString().slice(0, 10)).getTime()
 }
 
 export function canEdit(row) {

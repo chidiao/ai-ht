@@ -35,15 +35,15 @@ public class DemoDataInitializer implements CommandLineRunner {
 
         Contract executing = saveContract("PO-2026-003", "网络安全服务采购合同", "深圳安盾信息安全有限公司", "李倩",
                 "信息安全部", "安全服务", "96000.00", "48000.00", LocalDate.now().minusDays(45), LocalDate.now().minusDays(30),
-                LocalDate.now().plusDays(24), ContractStatus.PAYING, PaymentStatus.PARTIAL, "渗透测试和应急响应服务，临近到期需跟进验收。");
+                LocalDate.now().plusDays(24), ContractStatus.EXECUTING, PaymentStatus.PARTIAL, "渗透测试和应急响应服务，临近到期需跟进验收。");
         logRepository.save(new ContractFlowLog(executing.getId(), ContractAction.APPROVE, "赵总", ContractStatus.PENDING_APPROVAL, ContractStatus.ACTIVE, "审批通过"));
         logRepository.save(new ContractFlowLog(executing.getId(), ContractAction.START_EXECUTION, "李倩", ContractStatus.ACTIVE, ContractStatus.EXECUTING, "服务开始执行"));
-        logRepository.save(new ContractFlowLog(executing.getId(), ContractAction.REGISTER_PAYMENT, "财务刘洋", ContractStatus.EXECUTING, ContractStatus.PAYING, "已支付首款"));
+        logRepository.save(new ContractFlowLog(executing.getId(), ContractAction.REGISTER_PAYMENT, "财务刘洋", ContractStatus.EXECUTING, ContractStatus.EXECUTING, "已支付首款"));
 
         Contract completed = saveContract("PO-2026-004", "办公家具采购合同", "杭州木禾办公家具有限公司", "王敏",
                 "行政部", "办公家具", "58000.00", "58000.00", LocalDate.now().minusDays(90), LocalDate.now().minusDays(80),
                 LocalDate.now().minusDays(5), ContractStatus.COMPLETED, PaymentStatus.PAID, "家具已验收，等待档案归档。");
-        logRepository.save(new ContractFlowLog(completed.getId(), ContractAction.COMPLETE, "王敏", ContractStatus.PAYING, ContractStatus.COMPLETED, "履约与付款完成"));
+        logRepository.save(new ContractFlowLog(completed.getId(), ContractAction.COMPLETE, "王敏", ContractStatus.EXECUTING, ContractStatus.COMPLETED, "履约与付款完成"));
     }
 
     private Contract saveContract(String contractNo, String name, String supplierName, String owner, String department,
@@ -64,6 +64,17 @@ public class DemoDataInitializer implements CommandLineRunner {
         contract.setExpiryDate(expiryDate);
         contract.setStatus(status);
         contract.setPaymentStatus(paymentStatus);
+        if (status == ContractStatus.DRAFT) {
+            contract.setApprovalStatus(ApprovalStatus.NOT_SUBMITTED);
+            contract.setSigningStatus(SigningStatus.UNSIGNED);
+        } else if (status == ContractStatus.PENDING_APPROVAL) {
+            contract.setApprovalStatus(ApprovalStatus.PENDING);
+            contract.setSigningStatus(SigningStatus.BOTH_SIGNED);
+        } else {
+            contract.setApprovalStatus(ApprovalStatus.APPROVED);
+            contract.setSigningStatus(SigningStatus.BOTH_SIGNED);
+        }
+        contract.setArchiveStatus(status == ContractStatus.ARCHIVED ? ArchiveStatus.ARCHIVED : ArchiveStatus.UNARCHIVED);
         contract.setRemark(remark);
         return contractRepository.save(contract);
     }
