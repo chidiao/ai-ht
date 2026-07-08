@@ -32,7 +32,6 @@ public class ContractService {
         requiredStatus.put(ContractAction.APPROVE, ContractStatus.PENDING_APPROVAL);
         requiredStatus.put(ContractAction.REJECT, ContractStatus.PENDING_APPROVAL);
         requiredStatus.put(ContractAction.START_EXECUTION, ContractStatus.ACTIVE);
-        requiredStatus.put(ContractAction.REGISTER_PAYMENT, ContractStatus.EXECUTING);
         requiredStatus.put(ContractAction.COMPLETE, ContractStatus.PAYING);
         requiredStatus.put(ContractAction.ARCHIVE, ContractStatus.COMPLETED);
     }
@@ -167,6 +166,12 @@ public class ContractService {
                 throw new IllegalStateException("Completed or archived contracts cannot be terminated");
             }
             return ContractStatus.TERMINATED;
+        }
+        if (request.action() == ContractAction.REGISTER_PAYMENT) {
+            if (contract.getStatus() != ContractStatus.EXECUTING && contract.getStatus() != ContractStatus.PAYING) {
+                throw new IllegalStateException("Current status does not allow this action");
+            }
+            return ContractStatus.PAYING;
         }
         ContractStatus required = requiredStatus.get(request.action());
         if (required == null) {

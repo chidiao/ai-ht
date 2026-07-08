@@ -61,14 +61,29 @@
         <section class="content-panel">
           <div class="section-title">
             <h2>流程记录</h2>
+            <span>{{ detail.logs.length }} 条记录</span>
           </div>
-          <el-timeline>
-            <el-timeline-item v-for="log in detail.logs" :key="log.id" :timestamp="formatDateTime(log.operatedAt)">
-              <strong>{{ actionLabel(log.action) }}</strong>
-              <p>{{ statusLabel(log.fromStatus) || '开始' }} → {{ statusLabel(log.toStatus) }}</p>
-              <p>{{ log.operator }}：{{ log.comment || '无备注' }}</p>
-            </el-timeline-item>
-          </el-timeline>
+          <div class="flow-log-list">
+            <article v-for="log in detail.logs" :key="log.id" class="flow-log-card">
+              <div class="flow-log-marker"></div>
+              <div class="flow-log-body">
+                <div class="flow-log-head">
+                  <div>
+                    <strong>{{ actionLabel(log.action) }}</strong>
+                    <p>{{ statusLabel(log.fromStatus) || '开始' }} → {{ statusLabel(log.toStatus) }}</p>
+                  </div>
+                  <time>{{ formatDateTime(log.operatedAt) }}</time>
+                </div>
+                <div class="flow-log-meta">
+                  <span>操作人</span>
+                  <strong>{{ log.operator || '-' }}</strong>
+                </div>
+                <div class="flow-log-comment">
+                  <span v-for="item in splitComment(log.comment)" :key="item">{{ item }}</span>
+                </div>
+              </div>
+            </article>
+          </div>
         </section>
       </template>
 
@@ -138,6 +153,13 @@ function openAction(action) {
   actionVisible.value = true
 }
 
+function splitComment(comment) {
+  if (!comment) {
+    return ['无备注']
+  }
+  return comment.split('；').filter(Boolean)
+}
+
 async function submitAction(actionForm) {
   saving.value = true
   try {
@@ -159,3 +181,110 @@ async function submitAction(actionForm) {
 
 loadDetail()
 </script>
+
+<style scoped>
+.flow-log-list {
+  position: relative;
+  display: grid;
+  gap: 14px;
+}
+
+.flow-log-list::before {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 9px;
+  width: 2px;
+  content: "";
+  background: #e2e8f0;
+}
+
+.flow-log-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.flow-log-marker {
+  position: relative;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  margin-top: 18px;
+  border: 4px solid #eff6ff;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.flow-log-body {
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.flow-log-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.flow-log-head strong {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.flow-log-head p {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.flow-log-head time {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.flow-log-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #f8fafc;
+}
+
+.flow-log-meta span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.flow-log-meta strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.flow-log-comment {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.flow-log-comment span {
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .flow-log-head {
+    display: grid;
+  }
+}
+</style>

@@ -26,6 +26,9 @@ export const actionOptions = {
   ],
   ACTIVE: [{ value: 'START_EXECUTION', label: '开始执行' }],
   EXECUTING: [{ value: 'REGISTER_PAYMENT', label: '登记付款' }],
-  PAYING: [{ value: 'COMPLETE', label: '完成合同' }],
+  PAYING: [
+    { value: 'REGISTER_PAYMENT', label: '继续登记付款' },
+    { value: 'COMPLETE', label: '完成合同' }
+  ],
   COMPLETED: [{ value: 'ARCHIVE', label: '归档' }]
 }
