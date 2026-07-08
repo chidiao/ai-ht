@@ -207,6 +207,7 @@ public class ContractService {
             throw new IllegalArgumentException("计划付款金额不能大于合同金额");
         }
         validatePaymentPlanRatio(contract, request);
+        validatePaymentPlanTotal(contract, request);
         return paymentPlanRepository.save(new ContractPaymentPlan(
                 id,
                 request.paymentStage(),
@@ -562,6 +563,12 @@ public class ContractService {
         if (paymentAmount.compareTo(remainingPlanAmount) > 0) {
             throw new IllegalArgumentException("本次付款金额不能大于该付款计划剩余金额");
         }
+        BigDecimal contractPaidAmount = contract.getPaidAmount() == null ? BigDecimal.ZERO : contract.getPaidAmount();
+        BigDecimal remainingContractAmount = contract.getAmount().subtract(contractPaidAmount);
+        BigDecimal expectedPaymentAmount = remainingPlanAmount.min(remainingContractAmount);
+        if (paymentAmount.compareTo(expectedPaymentAmount) != 0) {
+            throw new IllegalArgumentException("已选择付款计划时，本次付款金额必须等于计划和合同剩余可付金额");
+        }
     }
 
     private void validatePaymentPlanRatio(Contract contract, ContractPaymentPlanRequest request) {
@@ -574,6 +581,26 @@ public class ContractService {
         BigDecimal diff = expectedAmount.subtract(request.plannedAmount()).abs();
         if (diff.compareTo(new BigDecimal("0.01")) > 0) {
             throw new IllegalArgumentException("付款比例与计划金额不一致，请按合同金额重新计算");
+        }
+    }
+
+    private void validatePaymentPlanTotal(Contract contract, ContractPaymentPlanRequest request) {
+        List<ContractPaymentPlan> existingPlans = paymentPlanRepository.findByContractIdOrderByPlannedDateAscCreatedAtAsc(contract.getId());
+        BigDecimal totalRatio = existingPlans.stream()
+                .map(ContractPaymentPlan::getPlannedRatio)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .add(request.plannedRatio() == null ? BigDecimal.ZERO : request.plannedRatio());
+        if (totalRatio.compareTo(new BigDecimal("100.00")) > 0) {
+            throw new IllegalArgumentException("付款计划比例合计不能超过 100%");
+        }
+        BigDecimal totalAmount = existingPlans.stream()
+                .map(ContractPaymentPlan::getPlannedAmount)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .add(request.plannedAmount());
+        if (totalAmount.compareTo(contract.getAmount()) > 0) {
+            throw new IllegalArgumentException("付款计划金额合计不能大于合同金额");
         }
     }
 

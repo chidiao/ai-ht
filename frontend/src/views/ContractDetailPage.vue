@@ -234,8 +234,14 @@
     <el-dialog v-model="paymentPlanVisible" title="新增付款计划" width="560px">
       <el-form :model="paymentPlanForm" label-width="112px">
         <el-form-item label="付款阶段"><el-input v-model="paymentPlanForm.paymentStage" /></el-form-item>
-        <el-form-item label="付款比例"><el-input-number v-model="paymentPlanForm.plannedRatio" :min="0" :max="100" :precision="2" @change="syncPaymentPlanAmount" /></el-form-item>
-        <el-form-item label="计划金额"><el-input-number v-model="paymentPlanForm.plannedAmount" :min="0" :max="Number(detail.contract?.amount || 0)" :precision="2" @change="syncPaymentPlanRatio" /></el-form-item>
+        <el-form-item label="剩余可规划">
+          <div class="payment-plan-remain">
+            <span>{{ remainingPlanRatio }}%</span>
+            <strong>{{ money(remainingPlanAmount) }}</strong>
+          </div>
+        </el-form-item>
+        <el-form-item label="付款比例"><el-input-number v-model="paymentPlanForm.plannedRatio" :min="0" :max="remainingPlanRatio" :precision="2" @change="syncPaymentPlanAmount" /></el-form-item>
+        <el-form-item label="计划金额"><el-input-number v-model="paymentPlanForm.plannedAmount" :min="0" :max="remainingPlanAmount" :precision="2" @change="syncPaymentPlanRatio" /></el-form-item>
         <el-form-item label="计划日期"><el-date-picker v-model="paymentPlanForm.plannedDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
         <el-form-item label="付款条件"><el-input v-model="paymentPlanForm.paymentCondition" type="textarea" :rows="3" /></el-form-item>
       </el-form>
@@ -342,6 +348,10 @@ const permittedActions = computed(() => {
 })
 
 const canRegisterAcceptance = computed(() => ['EXECUTING', 'COMPLETED'].includes(detail.contract?.status) && canRunAction(currentRole.value, 'REGISTER_ACCEPTANCE'))
+const plannedRatioTotal = computed(() => detail.paymentPlans.reduce((sum, item) => sum + Number(item.plannedRatio || 0), 0))
+const plannedAmountTotal = computed(() => detail.paymentPlans.reduce((sum, item) => sum + Number(item.plannedAmount || 0), 0))
+const remainingPlanRatio = computed(() => roundMoney(Math.max(100 - plannedRatioTotal.value, 0)))
+const remainingPlanAmount = computed(() => roundMoney(Math.max(Number(detail.contract?.amount || 0) - plannedAmountTotal.value, 0)))
 
 async function loadDetail() {
   try {
@@ -360,6 +370,14 @@ async function loadDetail() {
 async function submitPaymentPlan() {
   try {
     syncPaymentPlanAmount()
+    if (Number(paymentPlanForm.plannedRatio || 0) <= 0 || Number(paymentPlanForm.plannedAmount || 0) <= 0) {
+      ElMessage.warning('付款比例和计划金额必须大于 0')
+      return
+    }
+    if (Number(paymentPlanForm.plannedRatio || 0) > remainingPlanRatio.value || Number(paymentPlanForm.plannedAmount || 0) > remainingPlanAmount.value) {
+      ElMessage.warning('付款计划合计不能超过合同金额或 100%')
+      return
+    }
     await addContractPaymentPlan(props.id, { ...paymentPlanForm, creator: currentUserName.value })
     ElMessage.success('付款计划已新增')
     paymentPlanVisible.value = false
@@ -374,7 +392,8 @@ function syncPaymentPlanAmount() {
   if (!contractAmount) {
     return
   }
-  paymentPlanForm.plannedAmount = roundMoney(contractAmount * Number(paymentPlanForm.plannedRatio || 0) / 100)
+  paymentPlanForm.plannedRatio = Math.min(Number(paymentPlanForm.plannedRatio || 0), remainingPlanRatio.value)
+  paymentPlanForm.plannedAmount = Math.min(roundMoney(contractAmount * Number(paymentPlanForm.plannedRatio || 0) / 100), remainingPlanAmount.value)
 }
 
 function syncPaymentPlanRatio() {
@@ -382,7 +401,8 @@ function syncPaymentPlanRatio() {
   if (!contractAmount) {
     return
   }
-  paymentPlanForm.plannedRatio = roundMoney(Number(paymentPlanForm.plannedAmount || 0) / contractAmount * 100)
+  paymentPlanForm.plannedAmount = Math.min(Number(paymentPlanForm.plannedAmount || 0), remainingPlanAmount.value)
+  paymentPlanForm.plannedRatio = Math.min(roundMoney(Number(paymentPlanForm.plannedAmount || 0) / contractAmount * 100), remainingPlanRatio.value)
 }
 
 function roundMoney(value) {
@@ -417,6 +437,7 @@ function openAction(action) {
 }
 
 function openPaymentPlanDialog() {
+  paymentPlanForm.plannedRatio = remainingPlanRatio.value || 0
   syncPaymentPlanAmount()
   paymentPlanVisible.value = true
 }
@@ -527,6 +548,27 @@ loadDetail()
 
 .status-strip strong {
   margin-top: 6px;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.payment-plan-remain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #dde4ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.payment-plan-remain span {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.payment-plan-remain strong {
   color: #0f172a;
   font-size: 14px;
 }

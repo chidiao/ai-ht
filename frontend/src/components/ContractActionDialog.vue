@@ -93,7 +93,14 @@
           <el-input v-model="actionForm.paymentStage" placeholder="例如：预付款、验收款、尾款" />
         </el-form-item>
         <el-form-item label="本次付款金额">
-          <el-input-number v-model="actionForm.paidAmount" :min="0" :max="remainingAmount" :precision="2" :step="1000" />
+          <el-input-number
+            v-model="actionForm.paidAmount"
+            :min="0"
+            :max="paymentAmountMax"
+            :precision="2"
+            :step="1000"
+            :disabled="hasSelectedPaymentPlan"
+          />
         </el-form-item>
         <el-form-item label="付款日期">
           <el-date-picker v-model="actionForm.paymentDate" type="date" value-format="YYYY-MM-DD" />
@@ -204,6 +211,15 @@ const actionForm = reactive(emptyActionForm())
 const requiredCommentActions = ['CANCEL_PROCESS', 'WITHDRAW_APPROVAL', 'REQUEST_TERMINATION', 'APPROVE_TERMINATION', 'REJECT_TERMINATION']
 const remainingAmount = computed(() => Math.max(Number(props.contract?.amount || 0) - Number(props.contract?.paidAmount || 0), 0))
 const unpaidPaymentPlans = computed(() => props.paymentPlans.filter((item) => paymentPlanRemaining(item) > 0))
+const selectedPaymentPlan = computed(() => props.paymentPlans.find((item) => item.id === actionForm.paymentPlanId))
+const hasSelectedPaymentPlan = computed(() => Boolean(selectedPaymentPlan.value))
+const selectedPaymentPlanAmount = computed(() => {
+  if (!selectedPaymentPlan.value) {
+    return remainingAmount.value
+  }
+  return Math.min(paymentPlanRemaining(selectedPaymentPlan.value), remainingAmount.value)
+})
+const paymentAmountMax = computed(() => hasSelectedPaymentPlan.value ? selectedPaymentPlanAmount.value : remainingAmount.value)
 
 watch(
   () => [visible.value, props.contract, props.action],
@@ -348,7 +364,7 @@ function applyPaymentPlan(planId) {
     return
   }
   actionForm.paymentStage = plan.paymentStage
-  actionForm.paidAmount = Math.min(paymentPlanRemaining(plan), remainingAmount.value)
+  actionForm.paidAmount = selectedPaymentPlanAmount.value
 }
 </script>
 
